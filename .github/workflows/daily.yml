@@ -1,0 +1,44 @@
+name: Dagelijkse voorspelling
+
+on:
+  schedule:
+    - cron: "30 0 * * *"
+  workflow_dispatch:
+    inputs:
+      force_backtest:
+        description: "Backtest opnieuw draaien (ook als hij al bestaat)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daily
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Data ophalen
+        run: python fetch_data.py
+      - name: Voorspellen + papieren portefeuille
+        run: python predict.py
+      - name: Backtest (enkel als hij nog niet bestaat voor deze modelversie)
+        run: python backtest.py ${{ github.event.inputs.force_backtest == 'true' && '--force' || '' }}
+      - name: Committen
+        run: |
+          git config user.name "btc-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/
+          git diff --cached --quiet || git commit -m "Run $(date -u +%Y-%m-%d)"
+          git pull --rebase
+          git push
