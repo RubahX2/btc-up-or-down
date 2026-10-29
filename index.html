@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BTC up or down</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root {
+  color-scheme: light;
+  --page: #f9f9f7; --surface: #fcfcfb; --ink: #0b0b0b; --ink2: #52514e; --muted: #898781;
+  --grid: #e1e0d9; --axis: #c3c2b7; --ring: rgba(11,11,11,0.10);
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100;
+  --good: #006300; --bad: #d03b3b;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --page: #0d0d0d; --surface: #1a1a19; --ink: #f0efec; --ink2: #c3c2b7; --muted: #898781;
+    --grid: #2c2c2a; --axis: #383835; --ring: rgba(255,255,255,0.10);
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500;
+    --good: #0ca30c; --bad: #e66767;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #0d0d0d; --surface: #1a1a19; --ink: #f0efec; --ink2: #c3c2b7; --muted: #898781;
+  --grid: #2c2c2a; --axis: #383835; --ring: rgba(255,255,255,0.10);
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500;
+  --good: #0ca30c; --bad: #e66767;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--ink);
+  font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+main { max-width: 980px; margin: 0 auto; padding: 28px 16px 48px; }
+h1 { font-size: 26px; margin: 0 0 2px; letter-spacing: -0.01em; }
+h2 { font-size: 17px; margin: 0 0 12px; }
+.sub { color: var(--ink2); margin: 0 0 24px; }
+section { background: var(--surface); border: 1px solid var(--ring); border-radius: 10px;
+  padding: 18px; margin-bottom: 16px; }
+.note { color: var(--ink2); font-size: 13px; margin: 8px 0 0; }
+.muted { color: var(--muted); }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+.tile { border: 1px solid var(--ring); border-radius: 8px; padding: 10px 12px; }
+.tile .k { font-size: 12px; color: var(--ink2); }
+.tile .v { font-size: 22px; font-weight: 600; }
+.tile .d { font-size: 12px; color: var(--muted); }
+.hero { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 20px; }
+.hero .sig { font-size: 40px; font-weight: 700; }
+.up { color: var(--good); } .down { color: var(--bad); }
+table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+th, td { text-align: right; padding: 6px 8px; border-bottom: 1px solid var(--grid);
+  font-variant-numeric: tabular-nums; white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+th { color: var(--ink2); font-weight: 600; }
+.scroll { overflow-x: auto; }
+.chart { position: relative; height: 300px; margin-top: 8px; }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 13px; color: var(--ink2); margin-top: 6px; }
+.legend i { display: inline-block; width: 14px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 6px; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 700px) { .grid2 { grid-template-columns: 1fr; } .hero .sig { font-size: 32px; } }
+footer { color: var(--muted); font-size: 12.5px; text-align: center; margin-top: 24px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>BTC up or down</h1>
+  <p class="sub">Sluit bitcoin vandaag hoger dan gisteren? Eén kansvoorspelling per dag (slot 00:00 UTC), publiek en onveranderbaar gelogd.</p>
+
+  <section id="today"><h2>Vandaag</h2><div id="today-body" class="muted">Laden…</div></section>
+
+  <section id="live">
+    <h2>Live trackrecord</h2>
+    <div id="live-tiles" class="tiles"></div>
+    <p id="live-note" class="note"></p>
+    <div class="scroll"><table id="live-table"></table></div>
+  </section>
+
+  <section id="paper">
+    <h2>Papieren portefeuille <span class="muted" style="font-weight:400">· Hyperliquid perps, 1x, start 10.000 USD</span></h2>
+    <div id="paper-tiles" class="tiles"></div>
+    <div class="chart"><canvas id="paper-chart"></canvas></div>
+    <div class="legend"><span><i style="background:var(--s1)"></i>Model (long/short)</span><span><i style="background:var(--s3)"></i>Kopen en vasthouden</span></div>
+  </section>
+
+  <section id="bt">
+    <h2>Backtest <span id="bt-period" class="muted" style="font-weight:400"></span></h2>
+    <div id="bt-tiles" class="tiles"></div>
+    <p id="bt-verdict" class="note"></p>
+    <div class="chart"><canvas id="bt-chart"></canvas></div>
+    <div class="legend">
+      <span><i style="background:var(--s1)"></i>Long/short</span>
+      <span><i style="background:var(--s2)"></i>Long/cash</span>
+      <span><i style="background:var(--s3)"></i>Kopen en vasthouden</span>
+      <span><i style="background:var(--s4)"></i>Altijd long (perps)</span>
+    </div>
+    <p class="note">Logaritmische schaal. Startkapitaal = 1. Fees 0,045% per kant bij elke wissel; funding verrekend (Hyperliquid-historiek, daarvoor een aanname van 0,03%/dag).</p>
+    <h2 style="margin-top:20px">Scenario's</h2>
+    <div class="scroll"><table id="bt-scen"></table></div>
+    <div class="grid2" style="margin-top:20px">
+      <div><h2>Kalibratie</h2><div class="scroll"><table id="bt-cal"></table></div>
+        <p class="note">Goed gekalibreerd = "voorspeld" en "uitgekomen" liggen dicht bij elkaar.</p></div>
+      <div><h2>Wat het model gebruikt</h2><div class="scroll"><table id="bt-coef"></table></div>
+        <p class="note">Gestandaardiseerde gewichten. Positief = duwt richting "omhoog".</p></div>
+    </div>
+    <h2 style="margin-top:20px">Per jaar</h2>
+    <div class="scroll"><table id="bt-years"></table></div>
+  </section>
+
+  <footer>BTC up or down · v<span id="ui-version">0.1</span> · model <span id="model-version">–</span> · geen beleggingsadvies</footer>
+</main>
+
+<script>
+const UI_VERSION = "0.1";
+document.getElementById("ui-version").textContent = UI_VERSION;
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const pct = (x, d = 1) => x == null ? "–" : (x * 100).toFixed(d).replace(".", ",") + "%";
+const sgn = (x, d = 1) => x == null ? "–" : (x >= 0 ? "+" : "") + pct(x, d);
+const num = (x, d = 0) => x == null ? "–" : x.toLocaleString("nl-BE", { minimumFractionDigits: d, maximumFractionDigits: d });
+const tile = (k, v, d = "") => `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div><div class="d">${d}</div></div>`;
+const arrow = s => s === "up" ? '<span class="up">▲ omhoog</span>' : '<span class="down">▼ omlaag</span>';
+async function getJSON(p) { try { const r = await fetch(p + "?t=" + Date.now()); return r.ok ? r.json() : null; } catch { return null; } }
+
+function lineChart(id, labels, series, logScale) {
+  const el = document.getElementById(id);
+  return new Chart(el, {
+    type: "line",
+    data: { labels, datasets: series.map(s => ({ label: s.label, data: s.data, borderColor: css(s.color),
+      borderWidth: 2, pointRadius: 0, pointHoverRadius: 4, tension: 0 })) },
+    options: { maintainAspectRatio: false, animation: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: { legend: { display: false },
+        tooltip: { callbacks: { label: c => ` ${c.dataset.label}: ${num(c.parsed.y, logScale ? 2 : 0)}` } } },
+      scales: {
+        x: { ticks: { color: css("--muted"), maxTicksLimit: 8, autoSkip: true }, grid: { display: false }, border: { color: css("--axis") } },
+        y: { type: logScale ? "logarithmic" : "linear", ticks: { color: css("--muted"), maxTicksLimit: 6,
+              callback: v => num(v, logScale && v < 10 ? 1 : 0) },
+             grid: { color: css("--grid") }, border: { display: false } } } }
+  });
+}
+
+function hitrate(rows) { return rows.length ? rows.filter(r => r.hit).length / rows.length : null; }
+
+async function main() {
+  const [preds, paper, bt, status] = await Promise.all([
+    getJSON("data/predictions.json"), getJSON("data/paper.json"),
+    getJSON("data/backtest.json"), getJSON("data/fetch_status.json")]);
+
+  // Vandaag
+  const tb = document.getElementById("today-body");
+  if (preds && preds.length) {
+    const t = preds[preds.length - 1];
+    document.getElementById("model-version").textContent = t.model_version;
+    tb.className = "";
+    tb.innerHTML = `<div class="hero"><span class="sig">${arrow(t.signal)}</span>
+      <span>kans op omhoog <b>${pct(t.p_up)}</b></span></div>
+      <p class="note">Voor ${t.target_date} (UTC): slot vandaag vs. slot ${t.ref_date} van ${num(t.ref_close, 0)} USD.
+      Gelogd op ${t.made_at.replace("T", " ").slice(0, 16)} UTC.${status ? " Data opgehaald " + status.fetched_at.replace("T", " ").slice(0, 16) + " UTC." : ""}</p>`;
+  } else {
+    tb.textContent = "Nog geen voorspelling. De eerste komt na de eerste nachtelijke run.";
+  }
+
+  // Live trackrecord
+  const done = (preds || []).filter(p => p.outcome);
+  const last = n => done.slice(-n);
+  const upRate = done.length ? done.filter(p => p.outcome === "up").length / done.length : null;
+  let persist = null;
+  if (done.length > 1) {
+    let ok = 0, n = 0;
+    for (let i = 1; i < done.length; i++) { n++; if (done[i].outcome === done[i - 1].outcome) ok++; }
+    persist = ok / n;
+  }
+  const h = hitrate(done), n = done.length;
+  const moe = n ? 1.96 * Math.sqrt(0.25 / n) : null;
+  document.getElementById("live-tiles").innerHTML =
+    tile("Afgeronde dagen", n, n < 180 ? `nog ${180 - n} tot eerste oordeel` : "eerste oordeel mogelijk") +
+    tile("Hitrate totaal", pct(h), moe ? "foutmarge ±" + pct(moe, 0) : "") +
+    tile("Laatste 30 dagen", pct(hitrate(last(30)))) +
+    tile("Laatste 90 dagen", pct(hitrate(last(90)))) +
+    tile("Baseline: altijd omhoog", pct(upRate), "zelfde dagen") +
+    tile("Baseline: morgen = vandaag", pct(persist));
+  document.getElementById("live-note").textContent = n
+    ? "Een hitrate telt pas als ze boven beide baselines ligt én buiten de foutmarge."
+    : "Het live trackrecord start met de eerste afgeronde dag.";
+  const rows = (preds || []).slice(-30).reverse();
+  document.getElementById("live-table").innerHTML = rows.length ? `<tr><th>Doeldag</th><th>Signaal</th><th>Kans omhoog</th><th>Ref. slot</th><th>Slot</th><th>Uitkomst</th></tr>` +
+    rows.map(r => `<tr><td>${r.target_date}</td><td>${arrow(r.signal)}</td><td>${pct(r.p_up)}</td><td>${num(r.ref_close)}</td>
+      <td>${r.close ? num(r.close) : "–"}</td><td>${r.outcome == null ? '<span class="muted">loopt</span>' : (r.hit ? "✓ juist" : "✗ fout")}</td></tr>`).join("") : "";
+
+  // Papieren portefeuille
+  if (paper && paper.history && paper.history.length) {
+    const hs = paper.history, lastH = hs[hs.length - 1];
+    const fees = hs.reduce((a, x) => a + x.fee + x.slippage, 0), fund = hs.reduce((a, x) => a + x.funding, 0);
+    document.getElementById("paper-tiles").innerHTML =
+      tile("Waarde", num(lastH.equity) + " USD", sgn(lastH.equity / paper.start_capital - 1)) +
+      tile("Kopen en vasthouden", num(lastH.buy_hold) + " USD", sgn(lastH.buy_hold / paper.start_capital - 1)) +
+      tile("Positie nu", paper.position > 0 ? "Long" : "Short", "sinds " + paper.start_date + " live") +
+      tile("Fees + slippage", num(fees, 2) + " USD") + tile("Funding betaald", num(fund, 2) + " USD", "negatief = ontvangen");
+    lineChart("paper-chart", hs.map(x => x.target_date), [
+      { label: "Model", data: hs.map(x => x.equity), color: "--s1" },
+      { label: "Kopen en vasthouden", data: hs.map(x => x.buy_hold), color: "--s3" }], false);
+  } else {
+    document.getElementById("paper-tiles").innerHTML = '<p class="muted">Start met de eerste nachtelijke run.</p>';
+    document.querySelector("#paper .chart").style.display = "none";
+  }
+
+  // Backtest
+  if (!bt) { document.getElementById("bt-tiles").innerHTML = '<p class="muted">Backtest volgt na de eerste run.</p>'; return; }
+  const H = bt.hits;
+  document.getElementById("bt-period").textContent = `· ${bt.period[0]} t/m ${bt.period[1]} · kluis vanaf ${bt.vault_start}`;
+  document.getElementById("bt-tiles").innerHTML =
+    tile("Hitrate model", pct(H.hitrate), `95%: ${pct(H.hitrate_ci95[0])} – ${pct(H.hitrate_ci95[1])}`) +
+    tile("Altijd omhoog", pct(H.baseline_always_up)) +
+    tile("Morgen = vandaag", pct(H.baseline_persistence)) +
+    tile("p-waarde", num(H.p_value_vs_always_up, 3), "t.o.v. altijd omhoog; < 0,05 = significant") +
+    tile("Sterke dagen (≥60% / ≤40%)", pct(H.strong_hitrate), num(H.strong_n) + " dagen") +
+    tile("Brier-skill", sgn(H.brier_skill, 2), "> 0 = beter dan basiskans");
+  const beats = H.hitrate > H.baseline_always_up && H.hitrate > H.baseline_persistence && H.p_value_vs_always_up < 0.05;
+  document.getElementById("bt-verdict").innerHTML = beats
+    ? "<b>Verslaat beide baselines, statistisch significant.</b> Kijk nu of dat ook na kosten overeind blijft (scenario's)."
+    : "<b>Verslaat de baselines niet overtuigend.</b> Over " + num(H.n) + " dagen is het verschil met 'altijd omhoog' niet te onderscheiden van toeval.";
+  const C = bt.curves;
+  lineChart("bt-chart", C.dates, [
+    { label: "Long/short", data: C.long_short, color: "--s1" }, { label: "Long/cash", data: C.long_cash, color: "--s2" },
+    { label: "Kopen en vasthouden", data: C.buy_hold, color: "--s3" }, { label: "Altijd long (perps)", data: C.always_long_perp, color: "--s4" }], true);
+  const names = { long_short: "Long/short", long_cash: "Long/cash", buy_hold: "Kopen en vasthouden", always_long_perp: "Altijd long (perps)" };
+  document.getElementById("bt-scen").innerHTML = `<tr><th>Scenario</th><th>Totaal</th><th>Per jaar</th><th>Max. daling</th><th>Sharpe</th><th>Trades</th><th>Fees</th><th>Funding</th></tr>` +
+    Object.entries(bt.scenarios).map(([k, s]) => `<tr><td>${names[k]}</td><td>${sgn(s.total_return, 0)}</td><td>${sgn(s.cagr)}</td>
+      <td>${pct(s.max_drawdown)}</td><td>${s.sharpe == null ? "–" : num(s.sharpe, 2)}</td><td>${num(s.trades)}</td>
+      <td>${pct(s.fees_total)}</td><td>${pct(s.funding_total)}</td></tr>`).join("");
+  document.getElementById("bt-cal").innerHTML = `<tr><th>Kans omhoog</th><th>Dagen</th><th>Voorspeld</th><th>Uitgekomen</th></tr>` +
+    bt.calibration.map(c => `<tr><td>${c.bin.replace(/\./g, ",")}</td><td>${num(c.n)}</td><td>${pct(c.mean_p)}</td><td>${pct(c.observed)}</td></tr>`).join("");
+  document.getElementById("bt-coef").innerHTML = `<tr><th>Feature</th><th>Gewicht</th></tr>` +
+    bt.coefficients.slice(0, 10).map(c => `<tr><td>${c.feature}</td><td>${(c.coef >= 0 ? "+" : "") + num(c.coef, 3)}</td></tr>`).join("");
+  document.getElementById("bt-years").innerHTML = `<tr><th>Jaar</th><th>Dagen</th><th>Hitrate</th><th>Altijd omhoog</th><th>Long/short</th><th>Long/cash</th><th>Kopen en vasthouden</th></tr>` +
+    bt.per_year.map(y => `<tr><td>${y.year}</td><td>${y.n}</td><td>${pct(y.hitrate)}</td><td>${pct(y.always_up)}</td>
+      <td>${sgn(y.long_short, 0)}</td><td>${sgn(y.long_cash, 0)}</td><td>${sgn(y.buy_hold, 0)}</td></tr>`).join("");
+  document.getElementById("model-version").textContent = bt.model_version;
+}
+main();
+</script>
+</body>
+</html>
