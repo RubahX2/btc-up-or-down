@@ -1,0 +1,12 @@
+[
+ {
+  "target_date": "2026-10-29",
+  "made_at": "2026-10-29T23:40:14+00:00",
+  "model_version": "0.1-logreg",
+  "p_up": 0.5008,
+  "signal": "up",
+  "ref_date": "2026-10-28",
+  "ref_close": 81267.59,
+  "outcome": null
+ }
+]
