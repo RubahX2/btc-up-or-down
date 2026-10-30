@@ -62,3 +62,18 @@ st = predict.update_paper({"target_date": "2026-01-03", "signal": "down"})
 assert st["position"] == -1 and st["history"][-1]["fee"] > 0
 print(f"4. papieren portefeuille: {st['equity']:.2f} na +10% en een wissel naar short: OK")
 shutil.rmtree(tmp)
+
+# 5. te late voorspelling wordt gemarkeerd en krijgt geen papieren trade; ander startkapitaal = nieuwe run
+tmp = Path(tempfile.mkdtemp()); predict.PRED = tmp / "p.json"; predict.PAPER = tmp / "paper.json"
+old = predict.update_predictions(prices.iloc[:-1])             # doeldag = gisteren -> >24u te laat
+assert old["late"] is True and old["delay_h"] > 24, old
+now_e = predict.update_predictions(prices)                     # doeldag = vandaag
+assert now_e["delay_h"] >= 0
+st = predict.update_paper(old)
+assert st["history"] == [] and st["position"] == 0, "te late voorspelling mag niet traden"
+(tmp / "paper.json").write_text(json.dumps({**predict.fresh_paper(), "start_capital": 10000.0, "start_date": "2026-10-29"}))
+state["mid"] = 100_000.0
+st = predict.update_paper({"target_date": "2026-11-01", "signal": "up", "late": False})
+assert st["start_capital"] == 1000.0 and (tmp / "paper_archive_2026-10-29.json").exists()
+print("5. te laat gemarkeerd, geen trade; oude run gearchiveerd bij nieuw startkapitaal: OK")
+shutil.rmtree(tmp)

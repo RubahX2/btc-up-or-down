@@ -24,7 +24,8 @@ PRED = DATA / "predictions.json"
 PAPER = DATA / "paper.json"
 HL = "https://api.hyperliquid.xyz/info"
 FROZEN = ("target_date", "made_at", "model_version", "p_up", "signal", "ref_close", "ref_date")
-START_CAPITAL = 10_000.0
+START_CAPITAL = 1_000.0
+LATE_HOURS = 8   # een voorspelling die later dan 08:00 UTC op de doeldag gemaakt wordt, is "te laat"
 
 
 def now_utc() -> datetime:
@@ -59,9 +60,14 @@ def update_predictions(prices: pd.DataFrame) -> dict:
         train = feat.dropna(subset=FEATURES + ["y"])
         model = fit_model(train[FEATURES].values, train["y"].values)
         p = float(model.predict_proba(last[FEATURES].values.reshape(1, -1).astype(float))[0, 1])
+        made = now_utc()
+        delay_h = (made - pd.Timestamp(target, tz="UTC")).total_seconds() / 3600
         new_entry = {
             "target_date": target,
-            "made_at": now_utc().isoformat(timespec="seconds"),
+            "made_at": made.isoformat(timespec="seconds"),
+            "delay_h": round(delay_h, 2),
+            # te laat = meer dan LATE_HOURS na het begin van de doeldag; telt niet mee in de officiële cijfers
+            "late": bool(delay_h > LATE_HOURS or delay_h < 0),
             "model_version": MODEL_VERSION,
             "p_up": round(p, 4),
             "signal": "up" if p > 0.5 else "down",
@@ -107,12 +113,26 @@ def fill_price(book, side: str, notional: float) -> float:
     return cost / qty
 
 
+def fresh_paper() -> dict:
+    return {"start_capital": START_CAPITAL, "equity": START_CAPITAL, "position": 0.0,
+            "units": 0.0, "last_mark": None, "last_time_ms": None,
+            "start_date": None, "start_mark": None, "history": []}
+
+
 def update_paper(pred_entry: dict) -> dict:
-    st = load_json(PAPER, {"start_capital": START_CAPITAL, "equity": START_CAPITAL, "position": 0.0,
-                           "units": 0.0, "last_mark": None, "last_time_ms": None,
-                           "start_date": None, "start_mark": None, "history": []})
+    st = load_json(PAPER, None) or fresh_paper()
+    if st.get("start_capital") != START_CAPITAL:
+        # ander startkapitaal = nieuwe run; de oude blijft bewaard in een archief
+        archive = PAPER.parent / f"paper_archive_{st.get('start_date') or 'leeg'}.json"
+        archive.write_text(json.dumps(st, indent=1))
+        print(f"Startkapitaal gewijzigd: oude run gearchiveerd in {archive.name}, nieuwe run start")
+        st = fresh_paper()
     if any(h["target_date"] == pred_entry["target_date"] for h in st["history"]):
         return st                                     # vandaag al verwerkt
+    if pred_entry.get("late"):
+        print("Voorspelling te laat: geen papieren trade vandaag")
+        PAPER.write_text(json.dumps(st, indent=1))
+        return st
     t_ms = int(now_utc().timestamp() * 1000)
     book = hl({"type": "l2Book", "coin": "BTC"})
     bid, ask = float(book["levels"][0][0]["px"]), float(book["levels"][1][0]["px"])

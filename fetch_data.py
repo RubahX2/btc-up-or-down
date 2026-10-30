@@ -24,13 +24,24 @@ UA = {"User-Agent": "Mozilla/5.0 (btc-up-or-down)"}
 def fetch_prices() -> pd.DataFrame:
     now = int(time.time())
     params = {"period1": START, "period2": now, "interval": "1d", "events": "history"}
+    res, last_err = None, None
     for attempt in range(4):
-        r = requests.get(YAHOO, params=params, headers=UA, timeout=30)
-        if r.status_code == 200:
+        try:
+            r = requests.get(YAHOO, params=params, headers=UA, timeout=30)
+            if r.status_code != 200:
+                raise RuntimeError(f"HTTP {r.status_code}: {r.text[:200]}")
+            body = r.json()
+            chart = body.get("chart") or {}
+            if chart.get("error") or not chart.get("result"):
+                raise RuntimeError(f"Yahoo-fout: {chart.get('error') or 'lege result'}")
+            res = chart["result"][0]
             break
-        time.sleep(5 * (attempt + 1))
-    r.raise_for_status()
-    res = r.json()["chart"]["result"][0]
+        except Exception as e:
+            last_err = e
+            print(f"Yahoo poging {attempt + 1}/4 mislukt: {e}")
+            time.sleep(10 * (attempt + 1))
+    if res is None:
+        sys.exit(f"STOP — Yahoo niet bereikbaar na 4 pogingen: {last_err}")
     q = res["indicators"]["quote"][0]
     df = pd.DataFrame({
         "date": pd.to_datetime(res["timestamp"], unit="s", utc=True).tz_localize(None).normalize(),
@@ -111,6 +122,7 @@ def main():
     print(json.dumps(status, indent=1))
     critical = [p for p in status["problems"] if not p.startswith("funding")]
     if critical:
+        print("Laatste 5 rijen:\n" + prices.tail(5).to_string())
         sys.exit("STOP — verdachte data: " + "; ".join(critical))
 
 
