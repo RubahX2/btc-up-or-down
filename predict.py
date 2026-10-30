@@ -42,6 +42,11 @@ C1_MIN_ON = 5
 # C1b (30-10-2026, na de kluistoets): zelfde signalen, strengere drempel 6/8 = midden van het plateau 5–7/8.
 # Gekozen met kennis van de kluis, dus enkel de live run telt als toets. C1 zelf blijft ongewijzigd.
 C1B_MIN_ON = 6
+# C1b+HLP (30-10-2026): C1b, maar de cash staat in de HLP-kluis van Hyperliquid zolang C1b uit staat.
+# Echte HLP-opbrengst via de API. Na een storting zit HLP-geld 4 dagen vast: een koopsignaal binnen
+# die 4 dagen wordt uitgesteld tot het geld vrijkomt (zoals in het echt).
+HLP_VAULT = "0xdfc24b077bc1425ad1dea75bcb6f8158e10df303"
+HLP_LOCK_MS = 4 * 24 * 3600 * 1000
 CARRY_REBAL_LEV = 2.0   # herbalanceren als de short meer dan 2x zijn resterende onderpand waard is
 
 
@@ -209,6 +214,62 @@ def update_paper(pred_entry: dict, target_pos: float = None, path=None,
     return st
 
 
+def hlp_return(t0_ms: int, t1_ms: int) -> float:
+    """Rendement van de HLP-kluis tussen t0 en t1: (winst(t1) - winst(t0)) / vermogen(t0).
+    Gebruikt het kortste venster (dag/week/maand/alles) dat t0 nog bevat. Stortingen en opnames
+    van anderen tellen niet mee, want we gebruiken de winstreeks, niet het vermogen."""
+    d = hl({"type": "vaultDetails", "vaultAddress": HLP_VAULT})
+    port = dict(d["portfolio"])
+    for window in ("day", "week", "month", "allTime"):
+        w = port.get(window)
+        if not w or not w["pnlHistory"] or w["pnlHistory"][0][0] > t0_ms:
+            continue
+        pnl = [(t, float(v)) for t, v in w["pnlHistory"]]
+        av = [(t, float(v)) for t, v in w["accountValueHistory"]]
+        at = lambda series, t: [v for ts, v in series if ts <= t][-1]
+        base = at(av, t0_ms)
+        if base <= 0:
+            continue
+        return (at(pnl, t1_ms) - at(pnl, t0_ms)) / base
+    raise RuntimeError("geen HLP-venster dat het begin bevat")
+
+
+def update_c1b_hlp(entry: dict, n_on: int, path=None) -> dict:
+    path = path or DATA / "paper_c1b_hlp.json"
+    st = load_json(path, None) or {**fresh_paper(), "kind": "c1b_hlp", "hlp_since_ms": None, "hlp_last_ms": None}
+    if any(h["target_date"] == entry["target_date"] for h in st["history"]):
+        return st
+    now_ms = int(now_utc().timestamp() * 1000)
+    hlp_gain, note = 0.0, None
+    # 1. HLP-opbrengst op de cash sinds de vorige run
+    if st["position"] == 0 and st.get("hlp_last_ms"):
+        try:
+            r = hlp_return(st["hlp_last_ms"], now_ms)
+            hlp_gain = st["equity"] * r
+            st["equity"] += hlp_gain
+        except Exception as e:
+            note = f"HLP-opbrengst onbekend ({e}); als 0 geteld"
+        st["hlp_last_ms"] = now_ms
+    # 2. doelpositie, rekening houdend met de 4 dagen blokkering
+    want = 1.0 if n_on >= C1B_MIN_ON else 0.0
+    target = want
+    if want == 1.0 and st["position"] == 0 and st.get("hlp_since_ms") and now_ms - st["hlp_since_ms"] < HLP_LOCK_MS:
+        target = 0.0
+        note = "koopsignaal, maar HLP-geld zit nog vast (4 dagen na storting): instap uitgesteld"
+    path.write_text(json.dumps(st, indent=1))
+    before = st["position"]
+    st = update_paper(entry, target, path, fee_rate=SPOT_FEE, perp=False,
+                      extra={"signals_on": n_on, "hlp_gain": round(hlp_gain, 4), **({"note": note} if note else {})})
+    # 3. cash gaat (terug) naar HLP
+    if st["position"] == 0 and (before != 0 or not st.get("hlp_since_ms")) and st["history"] \
+            and st["history"][-1]["target_date"] == entry["target_date"]:
+        st["hlp_since_ms"], st["hlp_last_ms"] = now_ms, now_ms
+    if st["position"] != 0:
+        st["hlp_since_ms"], st["hlp_last_ms"] = None, None
+    path.write_text(json.dumps(st, indent=1))
+    return st
+
+
 def fresh_carry() -> dict:
     return {"kind": "carry", "start_capital": START_CAPITAL, "equity": START_CAPITAL, "position": 0.0,
             "units": 0.0, "entry": None, "collateral": START_CAPITAL, "last_time_ms": None,
@@ -284,6 +345,11 @@ def main():
         print(f"C1b trend 6/8 ({n_on}/8 aan): {st['equity']:.2f} USD, positie {st['position']:+.0f}")
     except Exception as e:
         print(f"C1b overgeslagen: {e}")
+    try:
+        st = update_c1b_hlp(entry, c1_signals(prices))
+        print(f"C1b+HLP: {st['equity']:.2f} USD, positie {st['position']:+.0f}")
+    except Exception as e:
+        print(f"C1b+HLP overgeslagen: {e}")
     # C2: funding carry (marktneutraal)
     try:
         st = update_carry(entry["target_date"])

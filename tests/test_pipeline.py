@@ -122,3 +122,31 @@ st = predict.update_carry("2026-11-03", p2)
 assert st["history"][-1]["rebalanced"] and abs(st["units"] * 200_000 - st["collateral"]) < 1e-6
 print(f"8. C2 carry: koersneutraal, funding ontvangen, herbalanceert bij +100%; vermogen {st['equity']:.2f}: OK")
 shutil.rmtree(tmp)
+
+# 9. C1b+HLP: cash groeit met de echte HLP-winstreeks, 4 dagen blokkering stelt instap uit
+import datetime as _dt
+tmp = Path(tempfile.mkdtemp()); p3 = tmp / "c1b_hlp.json"; state["mid"] = 100_000.0
+clock = {"ms": 1_800_000_000_000}
+predict.now_utc = lambda: _dt.datetime.fromtimestamp(clock["ms"] / 1000, _dt.timezone.utc)
+DAY = 86_400_000
+def fake_hl2(payload):
+    if payload["type"] == "vaultDetails":       # HLP: vermogen 100M, winst 10.000 USD per dag = 0,01%/dag
+        t0 = 1_800_000_000_000 - 40 * DAY
+        pts = [(t0 + i * DAY // 4, 100e6, 10_000 * i / 4) for i in range(4 * 60)]
+        win = {"accountValueHistory": [[t, str(a)] for t, a, _ in pts], "pnlHistory": [[t, str(p)] for t, _, p in pts], "vlm": "0"}
+        return {"portfolio": [["day", {**win, "pnlHistory": win["pnlHistory"][-4:], "accountValueHistory": win["accountValueHistory"][-4:]}], ["allTime", win]]}
+    return fake_hl(payload)
+predict.hl = fake_hl2
+e = lambda d: {"target_date": d, "signal": "up", "late": False}
+st = predict.update_c1b_hlp(e("2026-11-01"), 2, p3)                 # cash -> naar HLP
+assert st["position"] == 0 and st["hlp_since_ms"] == clock["ms"] and st["equity"] == 1000.0
+clock["ms"] += DAY; st = predict.update_c1b_hlp(e("2026-11-02"), 7, p3)   # koopsignaal op dag 1: nog vast
+assert st["position"] == 0 and "vast" in st["history"][-1]["note"], st["history"][-1]
+assert abs(st["equity"] - 1000 * 1.0001) < 1e-6, st["equity"]       # 1 dag HLP-opbrengst
+clock["ms"] += 4 * DAY; st = predict.update_c1b_hlp(e("2026-11-03"), 7, p3)   # na de blokkering: instappen
+assert st["position"] == 1 and st["hlp_since_ms"] is None
+assert abs(st["history"][-1]["hlp_gain"] - 1000.1 * 0.0004) < 0.01   # 4 dagen opbrengst vóór de instap
+clock["ms"] += DAY; st = predict.update_c1b_hlp(e("2026-11-04"), 3, p3)       # verkopen -> terug naar HLP
+assert st["position"] == 0 and st["hlp_since_ms"] == clock["ms"]
+print(f"9. C1b+HLP: HLP-opbrengst, 4 dagen blokkering, instap en terugstorting kloppen; vermogen {st['equity']:.2f}: OK")
+shutil.rmtree(tmp)

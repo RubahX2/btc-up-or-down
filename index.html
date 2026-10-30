@@ -107,6 +107,14 @@ footer { color: var(--muted); font-size: 12.5px; text-align: center; margin-top:
     <p class="note">Toegevoegd na de kluistoets: drempel 6/8 ligt in het midden van een plateau (5–7/8 scoren alle drie goed). Omdat de keuze de kluisdata kende, telt enkel de live run als toets.</p>
   </section>
 
+  <section id="paperC1bH">
+    <h2>Uitdager C1b + HLP <span class="muted" style="font-weight:400">· C1b, maar de cash staat in de HLP-kluis van Hyperliquid · start 1.000 USD</span></h2>
+    <div id="paperC1bH-tiles" class="tiles"></div>
+    <div class="chart"><canvas id="paperC1bH-chart"></canvas></div>
+    <div class="legend"><span><i style="background:var(--s1)"></i>C1b + HLP</span><span><i style="background:var(--s3)"></i>Kopen en vasthouden</span></div>
+    <p class="note">Zolang C1b uit staat, verdient de cash de echte dagelijkse HLP-opbrengst (via de Hyperliquid-API). HLP-geld zit 4 dagen vast na een storting: een koopsignaal in die periode wordt uitgesteld. Het verschil met C1b toont wat de cashopbrengst echt waard is, na die vertraging.</p>
+  </section>
+
   <section id="paperC2">
     <h2>Uitdager C2 <span class="muted" style="font-weight:400">· funding carry: helft spot-BTC, helft onderpand voor een even grote perp-short · start 1.000 USD</span></h2>
     <div id="paperC2-tiles" class="tiles"></div>
@@ -139,11 +147,11 @@ footer { color: var(--muted); font-size: 12.5px; text-align: center; margin-top:
     <div class="scroll"><table id="bt-years"></table></div>
   </section>
 
-  <footer>BTC up or down · v<span id="ui-version">0.5</span> · model <span id="model-version">–</span> · geen beleggingsadvies</footer>
+  <footer>BTC up or down · v<span id="ui-version">0.6</span> · model <span id="model-version">–</span> · geen beleggingsadvies</footer>
 </main>
 
 <script>
-const UI_VERSION = "0.5";
+const UI_VERSION = "0.6";
 document.getElementById("ui-version").textContent = UI_VERSION;
 const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const pct = (x, d = 1) => x == null ? "–" : (x * 100).toFixed(d).replace(".", ",") + "%";
@@ -176,12 +184,15 @@ function renderPaper(id, P, label) {
   if (P && P.history && P.history.length) {
     const hs = P.history, lastH = hs[hs.length - 1];
     const fees = hs.reduce((a, x) => a + x.fee + x.slippage, 0), fund = hs.reduce((a, x) => a + x.funding, 0);
+    const hlp = hs.reduce((a, x) => a + (x.hlp_gain || 0), 0);
     const posName = P.kind === "carry" ? "Neutraal" : P.position > 0 ? "Long" : P.position < 0 ? "Short" : "Cash";
     tiles.innerHTML =
       tile("Waarde", num(lastH.equity) + " USD", sgn(lastH.equity / P.start_capital - 1)) +
       tile("Kopen en vasthouden", num(lastH.buy_hold) + " USD", sgn(lastH.buy_hold / P.start_capital - 1)) +
       tile("Positie nu", posName, (lastH.signals_on != null ? lastH.signals_on + "/8 signalen aan · " : "") + "live sinds " + P.start_date) +
-      tile("Fees + slippage", num(fees, 2) + " USD") + tile("Funding betaald", num(fund, 2) + " USD", "negatief = ontvangen");
+      tile("Fees + slippage", num(fees, 2) + " USD") +
+      (P.kind === "c1b_hlp" ? tile("HLP-opbrengst op cash", num(hlp, 2) + " USD", lastH.note || "")
+                            : tile("Funding betaald", num(fund, 2) + " USD", "negatief = ontvangen"));
     lineChart(id + "-chart", hs.map(x => x.target_date), [
       { label, data: hs.map(x => x.equity), color: "--s1" },
       { label: "Kopen en vasthouden", data: hs.map(x => x.buy_hold), color: "--s3" }], false);
@@ -194,8 +205,8 @@ function renderPaper(id, P, label) {
 function hitrate(rows) { return rows.length ? rows.filter(r => r.hit).length / rows.length : null; }
 
 async function main() {
-  const [preds, paper, paperB, paperC1, paperC1b, paperC2, bt, status] = await Promise.all([
-    getJSON("data/predictions.json"), getJSON("data/paper.json"), getJSON("data/paper_sterk60.json"), getJSON("data/paper_c1.json"), getJSON("data/paper_c1b.json"), getJSON("data/paper_carry.json"),
+  const [preds, paper, paperB, paperC1, paperC1b, paperC1bH, paperC2, bt, status] = await Promise.all([
+    getJSON("data/predictions.json"), getJSON("data/paper.json"), getJSON("data/paper_sterk60.json"), getJSON("data/paper_c1.json"), getJSON("data/paper_c1b.json"), getJSON("data/paper_c1b_hlp.json"), getJSON("data/paper_carry.json"),
     getJSON("data/backtest.json"), getJSON("data/fetch_status.json")]);
 
   // Vandaag
@@ -247,6 +258,7 @@ async function main() {
   renderPaper("paperB", paperB, "Uitdager B");
   renderPaper("paperC1", paperC1, "Uitdager C1");
   renderPaper("paperC1b", paperC1b, "Uitdager C1b");
+  renderPaper("paperC1bH", paperC1bH, "C1b + HLP");
   renderPaper("paperC2", paperC2, "Uitdager C2");
 
   // Backtest
