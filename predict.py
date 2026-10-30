@@ -26,6 +26,23 @@ HL = "https://api.hyperliquid.xyz/info"
 FROZEN = ("target_date", "made_at", "model_version", "p_up", "signal", "ref_close", "ref_date")
 START_CAPITAL = 1_000.0
 LATE_HOURS = 8   # een voorspelling die later dan 08:00 UTC op de doeldag gemaakt wordt, is "te laat"
+SPOT_FEE = 0.0007   # Hyperliquid spot, taker, basisniveau
+# Spoor B (30-10-2026): enkel long als het model minstens 60% kans op "omhoog" geeft, anders cash.
+# Vastgelegd vóór de start van de live run; niet bijsturen tijdens de run.
+CHALLENGERS = {
+    "sterk60": {"label": "Uitdager B: long bij ≥60%, anders cash",
+                "position": lambda p: 1.0 if p >= 0.60 else 0.0},
+}
+# Spoor C (30-10-2026), uit research/spoor_c. Vastgelegd vóór de start; niet bijsturen tijdens de run.
+#  C1: trend-ensemble, spot long/cash: long als minstens 5 van 8 trendsignalen aan staan
+#  C2: funding carry: helft spot-BTC, helft onderpand voor een even grote perp-short; verdient funding
+C1_SMA = (20, 50, 100, 200)
+C1_MOM = (14, 30, 60, 90)
+C1_MIN_ON = 5
+# C1b (30-10-2026, na de kluistoets): zelfde signalen, strengere drempel 6/8 = midden van het plateau 5–7/8.
+# Gekozen met kennis van de kluis, dus enkel de live run telt als toets. C1 zelf blijft ongewijzigd.
+C1B_MIN_ON = 6
+CARRY_REBAL_LEV = 2.0   # herbalanceren als de short meer dan 2x zijn resterende onderpand waard is
 
 
 def now_utc() -> datetime:
@@ -119,11 +136,24 @@ def fresh_paper() -> dict:
             "start_date": None, "start_mark": None, "history": []}
 
 
-def update_paper(pred_entry: dict) -> dict:
-    st = load_json(PAPER, None) or fresh_paper()
+def c1_signals(prices: pd.DataFrame) -> int:
+    """Aantal trendsignalen dat aan staat op het laatste afgesloten slot (0..8)."""
+    c = prices["close"].reset_index(drop=True)
+    on = [c.iloc[-1] > c.iloc[-n:].mean() for n in C1_SMA] + [c.iloc[-1] > c.iloc[-1 - L] for L in C1_MOM]
+    return int(sum(bool(x) for x in on))
+
+
+def update_paper(pred_entry: dict, target_pos: float = None, path=None,
+                 fee_rate: float = TAKER_FEE, perp: bool = True, extra: dict = None) -> dict:
+    """Papieren portefeuille bijwerken. target_pos: +1 long, 0 cash, -1 short.
+    Standaard (kampioen): long bij 'up', short bij 'down'."""
+    path = path or PAPER
+    if target_pos is None:
+        target_pos = 1.0 if pred_entry["signal"] == "up" else -1.0
+    st = load_json(path, None) or fresh_paper()
     if st.get("start_capital") != START_CAPITAL:
         # ander startkapitaal = nieuwe run; de oude blijft bewaard in een archief
-        archive = PAPER.parent / f"paper_archive_{st.get('start_date') or 'leeg'}.json"
+        archive = path.parent / f"{path.stem}_archive_{st.get('start_date') or 'leeg'}.json"
         archive.write_text(json.dumps(st, indent=1))
         print(f"Startkapitaal gewijzigd: oude run gearchiveerd in {archive.name}, nieuwe run start")
         st = fresh_paper()
@@ -131,7 +161,7 @@ def update_paper(pred_entry: dict) -> dict:
         return st                                     # vandaag al verwerkt
     if pred_entry.get("late"):
         print("Voorspelling te laat: geen papieren trade vandaag")
-        PAPER.write_text(json.dumps(st, indent=1))
+        path.write_text(json.dumps(st, indent=1))
         return st
     t_ms = int(now_utc().timestamp() * 1000)
     book = hl({"type": "l2Book", "coin": "BTC"})
@@ -142,13 +172,13 @@ def update_paper(pred_entry: dict) -> dict:
     funding_paid = 0.0
     if st["units"] and st["last_mark"]:
         pnl = st["units"] * (mid - st["last_mark"])
-        fh = hl({"type": "fundingHistory", "coin": "BTC", "startTime": st["last_time_ms"], "endTime": t_ms})
-        # funding per uur: units * mark * rate, positief = long betaalt
-        funding_paid = sum(st["units"] * mid * float(f["fundingRate"]) for f in fh)
+        if perp:                                      # spot betaalt geen funding
+            fh = hl({"type": "fundingHistory", "coin": "BTC", "startTime": st["last_time_ms"], "endTime": t_ms})
+            # funding per uur: units * mark * rate, positief = long betaalt
+            funding_paid = sum(st["units"] * mid * float(f["fundingRate"]) for f in fh)
         st["equity"] += pnl - funding_paid
 
-    # b. herbalanceren naar de doelpositie (+1 long, -1 short)
-    target_pos = 1.0 if pred_entry["signal"] == "up" else -1.0
+    # b. herbalanceren naar de doelpositie (+1 long, 0 cash, -1 short)
     fee = slip = 0.0
     px = mid
     if target_pos == st["position"] and st["units"]:
@@ -159,7 +189,7 @@ def update_paper(pred_entry: dict) -> dict:
     if abs(delta) * mid > 1:                          # alleen handelen als de richting wijzigt
         side = "buy" if delta > 0 else "sell"
         px = fill_price(book, side, abs(delta) * mid)
-        fee = abs(delta) * px * TAKER_FEE
+        fee = abs(delta) * px * fee_rate
         slip = abs(delta) * abs(px - mid)
         st["equity"] -= fee + slip
         target_units = target_pos * st["equity"] / mid
@@ -169,12 +199,57 @@ def update_paper(pred_entry: dict) -> dict:
 
     st["history"].append({
         "target_date": pred_entry["target_date"], "time": now_utc().isoformat(timespec="seconds"),
-        "signal": pred_entry["signal"], "mid": round(mid, 2), "fill": round(px, 2),
+        "signal": pred_entry["signal"], "position": target_pos, "mid": round(mid, 2), "fill": round(px, 2),
         "fee": round(fee, 4), "slippage": round(slip, 4), "funding": round(funding_paid, 4),
         "equity": round(st["equity"], 2),
         "buy_hold": round(st["start_capital"] * mid / st["start_mark"], 2),
+        **(extra or {}),
     })
-    PAPER.write_text(json.dumps(st, indent=1))
+    path.write_text(json.dumps(st, indent=1))
+    return st
+
+
+def fresh_carry() -> dict:
+    return {"kind": "carry", "start_capital": START_CAPITAL, "equity": START_CAPITAL, "position": 0.0,
+            "units": 0.0, "entry": None, "collateral": START_CAPITAL, "last_time_ms": None,
+            "start_date": None, "start_mark": None, "history": []}
+
+
+def update_carry(target_date: str, path=None) -> dict:
+    """C2: long `units` BTC spot + short `units` BTC perp. Koersbewegingen heffen elkaar op;
+    het resultaat is de funding die de short ontvangt (of betaalt als ze negatief is), min kosten.
+    Vermogen = units*entry + onderpand (blijft gelijk behalve funding en kosten)."""
+    path = path or DATA / "paper_carry.json"
+    st = load_json(path, None) or fresh_carry()
+    if any(h["target_date"] == target_date for h in st["history"]):
+        return st
+    t_ms = int(now_utc().timestamp() * 1000)
+    book = hl({"type": "l2Book", "coin": "BTC"})
+    mid = (float(book["levels"][0][0]["px"]) + float(book["levels"][1][0]["px"])) / 2
+    received = fee = 0.0
+    if st["units"]:
+        fh = hl({"type": "fundingHistory", "coin": "BTC", "startTime": st["last_time_ms"], "endTime": t_ms})
+        received = sum(st["units"] * mid * float(f["fundingRate"]) for f in fh)   # positief = short ontvangt
+        st["collateral"] += received
+    equity = st["units"] * (st["entry"] or mid) + st["collateral"]
+    margin_left = st["collateral"] + st["units"] * ((st["entry"] or mid) - mid)
+    rebalance = (not st["units"]) or margin_left <= 0 or st["units"] * mid / margin_left > CARRY_REBAL_LEV
+    if rebalance:                                     # (opnieuw) 50/50 zetten tegen de huidige koers
+        new_units = equity / (2 * mid)
+        d = abs(new_units - st["units"])
+        fee = d * mid * (SPOT_FEE + TAKER_FEE)
+        equity -= fee
+        new_units = equity / (2 * mid)
+        st.update({"units": new_units, "entry": mid, "collateral": equity - new_units * mid})
+    st.update({"equity": equity, "last_time_ms": t_ms, "position": 0.0})
+    if st["start_date"] is None:
+        st["start_date"], st["start_mark"] = target_date, mid
+    st["history"].append({
+        "target_date": target_date, "time": now_utc().isoformat(timespec="seconds"), "mid": round(mid, 2),
+        "fee": round(fee, 4), "slippage": 0.0, "funding": round(-received, 4), "rebalanced": rebalance,
+        "equity": round(equity, 2), "buy_hold": round(st["start_capital"] * mid / st["start_mark"], 2),
+    })
+    path.write_text(json.dumps(st, indent=1))
     return st
 
 
@@ -187,6 +262,34 @@ def main():
         print(f"Papieren portefeuille: {st['equity']:.2f} USD, positie {st['position']:+.0f}")
     except Exception as e:                            # papier mag de voorspelling nooit blokkeren
         print(f"Papieren portefeuille overgeslagen: {e}")
+    # uitdagers: zelfde voorspelling, andere handelsregel, eigen portefeuille
+    for name, rule in CHALLENGERS.items():
+        try:
+            st = update_paper(entry, rule["position"](entry["p_up"]), DATA / f"paper_{name}.json")
+            print(f"Uitdager {name}: {st['equity']:.2f} USD, positie {st['position']:+.0f}")
+        except Exception as e:
+            print(f"Uitdager {name} overgeslagen: {e}")
+    # C1: trend-ensemble, spot long/cash (onafhankelijk van het voorspellingsmodel)
+    try:
+        n_on = c1_signals(prices)
+        st = update_paper(entry, 1.0 if n_on >= C1_MIN_ON else 0.0, DATA / "paper_c1.json",
+                          fee_rate=SPOT_FEE, perp=False, extra={"signals_on": n_on})
+        print(f"C1 trend-ensemble ({n_on}/8 aan): {st['equity']:.2f} USD, positie {st['position']:+.0f}")
+    except Exception as e:
+        print(f"C1 overgeslagen: {e}")
+    try:
+        n_on = c1_signals(prices)
+        st = update_paper(entry, 1.0 if n_on >= C1B_MIN_ON else 0.0, DATA / "paper_c1b.json",
+                          fee_rate=SPOT_FEE, perp=False, extra={"signals_on": n_on})
+        print(f"C1b trend 6/8 ({n_on}/8 aan): {st['equity']:.2f} USD, positie {st['position']:+.0f}")
+    except Exception as e:
+        print(f"C1b overgeslagen: {e}")
+    # C2: funding carry (marktneutraal)
+    try:
+        st = update_carry(entry["target_date"])
+        print(f"C2 carry: {st['equity']:.2f} USD")
+    except Exception as e:
+        print(f"C2 overgeslagen: {e}")
 
 
 if __name__ == "__main__":

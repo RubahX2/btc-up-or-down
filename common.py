@@ -11,7 +11,7 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parent
 DATA = ROOT / "data"
 
-UI_VERSION = "0.2"
+UI_VERSION = "0.5"
 MODEL_VERSION = "0.2-logreg-cb"
 
 # Kluis: alles vanaf deze datum blijft buiten de backtest. Vaste datum,

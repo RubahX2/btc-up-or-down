@@ -77,3 +77,48 @@ st = predict.update_paper({"target_date": "2026-11-01", "signal": "up", "late": 
 assert st["start_capital"] == 1000.0 and (tmp / "paper_archive_2026-10-29.json").exists()
 print("5. te laat gemarkeerd, geen trade; oude run gearchiveerd bij nieuw startkapitaal: OK")
 shutil.rmtree(tmp)
+
+# 6. uitdager sterk60: long bij p>=0.60, cash eronder; eigen bestand, kampioen ongemoeid
+tmp = Path(tempfile.mkdtemp()); cpath = tmp / "paper_sterk60.json"
+rule = predict.CHALLENGERS["sterk60"]["position"]
+assert rule(0.60) == 1.0 and rule(0.5999) == 0.0
+state["mid"] = 100_000.0
+st = predict.update_paper({"target_date": "2026-11-01", "signal": "up", "late": False}, rule(0.55), cpath)
+assert st["position"] == 0 and st["history"][-1]["fee"] == 0 and st["equity"] == 1000.0      # cash: geen kosten
+st = predict.update_paper({"target_date": "2026-11-02", "signal": "up", "late": False}, rule(0.65), cpath)
+assert st["position"] == 1 and st["history"][-1]["fee"] > 0
+state["mid"] = 105_000.0
+st = predict.update_paper({"target_date": "2026-11-03", "signal": "up", "late": False}, rule(0.52), cpath)
+assert st["position"] == 0 and 1040 < st["equity"] < 1050, st["equity"]                    # +5% min kosten/funding
+print(f"6. uitdager sterk60: cash -> long -> cash, eindwaarde {st['equity']:.2f}: OK")
+shutil.rmtree(tmp)
+
+# 7. C1-signalen: stijgende reeks = 8/8 aan, dalende = 0/8; spot zonder funding met spot-fee
+up = pd.DataFrame({"close": np.linspace(100, 300, 400)}); dn = pd.DataFrame({"close": np.linspace(300, 100, 400)})
+assert predict.c1_signals(up) == 8 and predict.c1_signals(dn) == 0
+# zelfde definitie als het onderzoek (research/spoor_c/f6.py) op de nepdata
+c = prices["close"]
+sigs = [c > c.rolling(n).mean() for n in (20, 50, 100, 200)] + [c / c.shift(L) > 1 for L in (14, 30, 60, 90)]
+assert predict.c1_signals(prices) == int(sum(s.iloc[-1] for s in sigs))
+tmp = Path(tempfile.mkdtemp()); p1 = tmp / "paper_c1.json"; state["mid"] = 100_000.0
+st = predict.update_paper({"target_date": "2026-11-01", "signal": "down", "late": False}, 1.0, p1, fee_rate=predict.SPOT_FEE, perp=False)
+assert abs(st["history"][-1]["fee"] - 0.70) < 0.01, st["history"][-1]["fee"]               # 0,07% van ~1000
+state["mid"] = 110_000.0
+st = predict.update_paper({"target_date": "2026-11-02", "signal": "down", "late": False}, 1.0, p1, fee_rate=predict.SPOT_FEE, perp=False)
+assert st["history"][-1]["funding"] == 0 and 1097 < st["equity"] < 1100, st["equity"]
+print(f"7. C1: signalen kloppen met het onderzoek; spot zonder funding, eindwaarde {st['equity']:.2f}: OK")
+shutil.rmtree(tmp)
+
+# 8. C2 carry: koers +10% verandert niets, funding wordt ontvangen, herbalancering bij grote stijging
+tmp = Path(tempfile.mkdtemp()); p2 = tmp / "carry.json"; state["mid"] = 100_000.0
+st = predict.update_carry("2026-11-01", p2); e0 = st["equity"]
+assert 998.5 < e0 < 1000 and abs(st["units"] * 100_000 - st["collateral"]) < 1e-6           # 50/50
+state["mid"] = 110_000.0
+st = predict.update_carry("2026-11-02", p2)
+exp = e0 + st["units"] * 110_000 * 0.0000125 * 24                                           # 24 uur funding ontvangen
+assert abs(st["equity"] - exp) < 0.01 and not st["history"][-1]["rebalanced"], (st["equity"], exp)
+state["mid"] = 200_000.0                                                                      # +100%: short-onderpand op
+st = predict.update_carry("2026-11-03", p2)
+assert st["history"][-1]["rebalanced"] and abs(st["units"] * 200_000 - st["collateral"]) < 1e-6
+print(f"8. C2 carry: koersneutraal, funding ontvangen, herbalanceert bij +100%; vermogen {st['equity']:.2f}: OK")
+shutil.rmtree(tmp)

@@ -1,0 +1,142 @@
+{
+ "protocol": "research/spoor_c/VAULT_PROTOCOL.md",
+ "periode": [
+  "2025-11-01",
+  "2026-10-29"
+ ],
+ "resultaten": {
+  "A long/short (perps)": {
+   "rendement": -0.1713350376754743,
+   "sharpe": -0.20448777339444352,
+   "maxdd": -0.360416108217136,
+   "dagen": 363,
+   "trades": 106
+  },
+  "B \u226560% long (perps)": {
+   "rendement": 0.1289294327552828,
+   "sharpe": 1.0439337262668174,
+   "maxdd": -0.00045000000000006146,
+   "dagen": 363,
+   "trades": 6
+  },
+  "altijd long (perps)": {
+   "rendement": -0.33012034569033244,
+   "sharpe": -0.6880877680592514,
+   "maxdd": -0.4851039333774022,
+   "dagen": 363,
+   "trades": 1
+  },
+  "kopen-en-vasthouden (spot)": {
+   "rendement": -0.2903537464550049,
+   "sharpe": -0.558316527274522,
+   "maxdd": -0.4705442145052998,
+   "dagen": 363,
+   "trades": 1
+  },
+  "A hitrate": {
+   "hitrate": 0.4986225895316804,
+   "altijd_omhoog": 0.4793388429752066,
+   "p": 0.23103651670167769,
+   "n": 363,
+   "B_dagen_long": 3,
+   "B_hitrate_op_die_dagen": 1.0
+  },
+  "C1 trend-ensemble (spot)": {
+   "rendement": 0.10445071669253103,
+   "sharpe": 0.5962311551864351,
+   "maxdd": -0.08834172028758258,
+   "dagen": 363,
+   "trades": 14,
+   "blootstelling": 0.3140495867768595
+  },
+  "kopen-en-vasthouden (spot, dagreeks)": {
+   "rendement": -0.2900357052654785,
+   "sharpe": -0.5572872086710537,
+   "maxdd": -0.47054421450529904,
+   "dagen": 363
+  },
+  "C2 carry": {
+   "rendement": 0.027725042898089525,
+   "sharpe": 15.857432375644914,
+   "maxdd": -0.0007359806732940566,
+   "dagen": 363,
+   "slechtste_maand": -0.0003488114337489856,
+   "funding_jaarbasis_voor_short": 0.057716625482093664,
+   "dagen_negatieve_funding": 59
+  }
+ },
+ "per_maand": {
+  "2025-11": {
+   "C1": 0.0,
+   "K&V": -0.1751,
+   "C1 blootstelling": 0.0,
+   "C2": 0.003
+  },
+  "2025-12": {
+   "C1": 0.0,
+   "K&V": -0.0318,
+   "C1 blootstelling": 0.0,
+   "C2": 0.0027
+  },
+  "2026-01": {
+   "C1": -0.0313,
+   "K&V": -0.1011,
+   "C1 blootstelling": 0.1935,
+   "C2": 0.0031
+  },
+  "2026-02": {
+   "C1": 0.0,
+   "K&V": -0.1485,
+   "C1 blootstelling": 0.0,
+   "C2": 0.0009
+  },
+  "2026-03": {
+   "C1": 0.0,
+   "K&V": 0.0187,
+   "C1 blootstelling": 0.0,
+   "C2": 0.0004
+  },
+  "2026-04": {
+   "C1": -0.012,
+   "K&V": 0.1185,
+   "C1 blootstelling": 0.6667,
+   "C2": -0.0003
+  },
+  "2026-05": {
+   "C1": -0.0122,
+   "K&V": -0.0358,
+   "C1 blootstelling": 0.7097,
+   "C2": 0.0013
+  },
+  "2026-06": {
+   "C1": 0.0,
+   "K&V": -0.2046,
+   "C1 blootstelling": 0.0,
+   "C2": 0.0024
+  },
+  "2026-07": {
+   "C1": 0.0,
+   "K&V": 0.0735,
+   "C1 blootstelling": 0.0,
+   "C2": 0.004
+  },
+  "2026-08": {
+   "C1": 0.1299,
+   "K&V": 0.2505,
+   "C1 blootstelling": 0.4516,
+   "C2": 0.0035
+  },
+  "2026-09": {
+   "C1": 0.0636,
+   "K&V": 0.0636,
+   "C1 blootstelling": 1.0,
+   "C2": 0.0036
+  },
+  "2026-10": {
+   "C1": -0.0278,
+   "K&V": -0.0691,
+   "C1 blootstelling": 0.7586,
+   "C2": 0.0028
+  }
+ }
+}

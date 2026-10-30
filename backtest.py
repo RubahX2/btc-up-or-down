@@ -23,6 +23,7 @@ from common import (ASSUMED_FUNDING_PER_DAY, DATA, FEATURES, MIN_TRAIN_DAYS, MOD
                     load_funding, load_prices, max_drawdown)
 
 OUT = DATA / "backtest.json"
+BT_VERSION = 2          # verhogen als de backtest zelf verandert (bv. nieuw scenario)
 VAULT_OUT = DATA / "vault.json"
 
 
@@ -128,6 +129,7 @@ def evaluate(pred: pd.DataFrame, funding: pd.Series) -> dict:
     scen = {
         "long_short": strategy(pred, pd.Series(np.where(p > 0.5, 1.0, -1.0)), funding),
         "long_cash": strategy(pred, pd.Series(np.where(p > 0.5, 1.0, 0.0)), funding),
+        "sterk60": strategy(pred, pd.Series(np.where(p >= STRONG_HI, 1.0, 0.0)), funding),
         "buy_hold": strategy(pred, pd.Series(np.ones(len(pred))), funding, perp=False),
         "always_long_perp": strategy(pred, pd.Series(np.ones(len(pred))), funding),
     }
@@ -140,6 +142,7 @@ def evaluate(pred: pd.DataFrame, funding: pd.Series) -> dict:
             "always_up": float(g["y"].mean()),
             "long_short": float((1 + scen["long_short"].loc[idx, "ret"]).prod() - 1),
             "long_cash": float((1 + scen["long_cash"].loc[idx, "ret"]).prod() - 1),
+            "sterk60": float((1 + scen["sterk60"].loc[idx, "ret"]).prod() - 1),
             "buy_hold": float((1 + scen["buy_hold"].loc[idx, "ret"]).prod() - 1),
         })
     curves = pd.DataFrame({"date": scen["buy_hold"]["date"]})
@@ -185,7 +188,7 @@ def main():
 
     if OUT.exists() and not force:
         old = json.loads(OUT.read_text())
-        if old.get("model_version") == MODEL_VERSION:
+        if old.get("model_version") == MODEL_VERSION and old.get("bt_version") == BT_VERSION:
             print("Backtest bestaat al voor", MODEL_VERSION, "— overgeslagen (gebruik --force).")
             return
 
@@ -193,6 +196,7 @@ def main():
     res = evaluate(pred, funding)
     res.update({
         "model_version": MODEL_VERSION,
+        "bt_version": BT_VERSION,
         "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "vault_start": str(VAULT_START.date()),
         "settings": {"taker_fee": TAKER_FEE, "assumed_funding_per_day": ASSUMED_FUNDING_PER_DAY,

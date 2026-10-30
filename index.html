@@ -83,6 +83,38 @@ footer { color: var(--muted); font-size: 12.5px; text-align: center; margin-top:
     <div class="legend"><span><i style="background:var(--s1)"></i>Model (long/short)</span><span><i style="background:var(--s3)"></i>Kopen en vasthouden</span></div>
   </section>
 
+  <section id="paperB">
+    <h2>Uitdager B <span class="muted" style="font-weight:400">· long bij ≥60% kans op omhoog, anders cash · Hyperliquid perps, 1x, start 1.000 USD</span></h2>
+    <div id="paperB-tiles" class="tiles"></div>
+    <div class="chart"><canvas id="paperB-chart"></canvas></div>
+    <div class="legend"><span><i style="background:var(--s1)"></i>Uitdager B</span><span><i style="background:var(--s3)"></i>Kopen en vasthouden</span></div>
+    <p class="note">Zelfde voorspelling als het kampioensmodel, andere handelsregel. Vastgelegd op 30-10-2026, vóór de start van de live run.</p>
+  </section>
+
+  <section id="paperC1">
+    <h2>Uitdager C1 <span class="muted" style="font-weight:400">· trend-ensemble: long als ≥5 van 8 trendsignalen aan staan, anders cash · Hyperliquid spot, start 1.000 USD</span></h2>
+    <div id="paperC1-tiles" class="tiles"></div>
+    <div class="chart"><canvas id="paperC1-chart"></canvas></div>
+    <div class="legend"><span><i style="background:var(--s1)"></i>Uitdager C1</span><span><i style="background:var(--s3)"></i>Kopen en vasthouden</span></div>
+    <p class="note">Gebruikt het voorspellingsmodel niet. Signalen: slot boven SMA 20/50/100/200 en rendement over 14/30/60/90 dagen positief. Backtest 2016–okt 2025: +82%/jaar, Sharpe 1,47, max. daling −62% (kopen en vasthouden: +76%, 1,17, −84%).</p>
+  </section>
+
+  <section id="paperC1b">
+    <h2>Uitdager C1b <span class="muted" style="font-weight:400">· zelfde trendsignalen, strengere drempel: long als ≥6 van 8 aan staan · Hyperliquid spot, start 1.000 USD</span></h2>
+    <div id="paperC1b-tiles" class="tiles"></div>
+    <div class="chart"><canvas id="paperC1b-chart"></canvas></div>
+    <div class="legend"><span><i style="background:var(--s1)"></i>Uitdager C1b</span><span><i style="background:var(--s3)"></i>Kopen en vasthouden</span></div>
+    <p class="note">Toegevoegd na de kluistoets: drempel 6/8 ligt in het midden van een plateau (5–7/8 scoren alle drie goed). Omdat de keuze de kluisdata kende, telt enkel de live run als toets.</p>
+  </section>
+
+  <section id="paperC2">
+    <h2>Uitdager C2 <span class="muted" style="font-weight:400">· funding carry: helft spot-BTC, helft onderpand voor een even grote perp-short · start 1.000 USD</span></h2>
+    <div id="paperC2-tiles" class="tiles"></div>
+    <div class="chart"><canvas id="paperC2-chart"></canvas></div>
+    <div class="legend"><span><i style="background:var(--s1)"></i>Uitdager C2</span><span><i style="background:var(--s3)"></i>Kopen en vasthouden</span></div>
+    <p class="note">Marktneutraal: koersbewegingen heffen elkaar op, de opbrengst is de funding die longs aan shorts betalen. Mei 2023–okt 2025: ±8%/jaar netto. Wordt funding negatief, dan verliest deze strategie.</p>
+  </section>
+
   <section id="bt">
     <h2>Backtest <span id="bt-period" class="muted" style="font-weight:400"></span></h2>
     <div id="bt-tiles" class="tiles"></div>
@@ -107,11 +139,11 @@ footer { color: var(--muted); font-size: 12.5px; text-align: center; margin-top:
     <div class="scroll"><table id="bt-years"></table></div>
   </section>
 
-  <footer>BTC up or down · v<span id="ui-version">0.2</span> · model <span id="model-version">–</span> · geen beleggingsadvies</footer>
+  <footer>BTC up or down · v<span id="ui-version">0.5</span> · model <span id="model-version">–</span> · geen beleggingsadvies</footer>
 </main>
 
 <script>
-const UI_VERSION = "0.2";
+const UI_VERSION = "0.5";
 document.getElementById("ui-version").textContent = UI_VERSION;
 const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const pct = (x, d = 1) => x == null ? "–" : (x * 100).toFixed(d).replace(".", ",") + "%";
@@ -139,11 +171,31 @@ function lineChart(id, labels, series, logScale) {
   });
 }
 
+function renderPaper(id, P, label) {
+  const tiles = document.getElementById(id + "-tiles");
+  if (P && P.history && P.history.length) {
+    const hs = P.history, lastH = hs[hs.length - 1];
+    const fees = hs.reduce((a, x) => a + x.fee + x.slippage, 0), fund = hs.reduce((a, x) => a + x.funding, 0);
+    const posName = P.kind === "carry" ? "Neutraal" : P.position > 0 ? "Long" : P.position < 0 ? "Short" : "Cash";
+    tiles.innerHTML =
+      tile("Waarde", num(lastH.equity) + " USD", sgn(lastH.equity / P.start_capital - 1)) +
+      tile("Kopen en vasthouden", num(lastH.buy_hold) + " USD", sgn(lastH.buy_hold / P.start_capital - 1)) +
+      tile("Positie nu", posName, (lastH.signals_on != null ? lastH.signals_on + "/8 signalen aan · " : "") + "live sinds " + P.start_date) +
+      tile("Fees + slippage", num(fees, 2) + " USD") + tile("Funding betaald", num(fund, 2) + " USD", "negatief = ontvangen");
+    lineChart(id + "-chart", hs.map(x => x.target_date), [
+      { label, data: hs.map(x => x.equity), color: "--s1" },
+      { label: "Kopen en vasthouden", data: hs.map(x => x.buy_hold), color: "--s3" }], false);
+  } else {
+    tiles.innerHTML = '<p class="muted">Start met de eerste geldige nachtelijke run.</p>';
+    document.querySelector("#" + id + " .chart").style.display = "none";
+  }
+}
+
 function hitrate(rows) { return rows.length ? rows.filter(r => r.hit).length / rows.length : null; }
 
 async function main() {
-  const [preds, paper, bt, status] = await Promise.all([
-    getJSON("data/predictions.json"), getJSON("data/paper.json"),
+  const [preds, paper, paperB, paperC1, paperC1b, paperC2, bt, status] = await Promise.all([
+    getJSON("data/predictions.json"), getJSON("data/paper.json"), getJSON("data/paper_sterk60.json"), getJSON("data/paper_c1.json"), getJSON("data/paper_c1b.json"), getJSON("data/paper_carry.json"),
     getJSON("data/backtest.json"), getJSON("data/fetch_status.json")]);
 
   // Vandaag
@@ -190,22 +242,12 @@ async function main() {
     rows.map(r => `<tr><td>${r.target_date}</td><td>${arrow(r.signal)}</td><td>${pct(r.p_up)}</td><td>${num(r.ref_close)}</td>
       <td>${r.close ? num(r.close) : "–"}</td><td>${isLate(r) ? '<span class="muted">te laat, telt niet</span>' : r.outcome == null ? '<span class="muted">loopt</span>' : (r.hit ? "✓ juist" : "✗ fout")}</td></tr>`).join("") : "";
 
-  // Papieren portefeuille
-  if (paper && paper.history && paper.history.length) {
-    const hs = paper.history, lastH = hs[hs.length - 1];
-    const fees = hs.reduce((a, x) => a + x.fee + x.slippage, 0), fund = hs.reduce((a, x) => a + x.funding, 0);
-    document.getElementById("paper-tiles").innerHTML =
-      tile("Waarde", num(lastH.equity) + " USD", sgn(lastH.equity / paper.start_capital - 1)) +
-      tile("Kopen en vasthouden", num(lastH.buy_hold) + " USD", sgn(lastH.buy_hold / paper.start_capital - 1)) +
-      tile("Positie nu", paper.position > 0 ? "Long" : "Short", "sinds " + paper.start_date + " live") +
-      tile("Fees + slippage", num(fees, 2) + " USD") + tile("Funding betaald", num(fund, 2) + " USD", "negatief = ontvangen");
-    lineChart("paper-chart", hs.map(x => x.target_date), [
-      { label: "Model", data: hs.map(x => x.equity), color: "--s1" },
-      { label: "Kopen en vasthouden", data: hs.map(x => x.buy_hold), color: "--s3" }], false);
-  } else {
-    document.getElementById("paper-tiles").innerHTML = '<p class="muted">Start met de eerste nachtelijke run.</p>';
-    document.querySelector("#paper .chart").style.display = "none";
-  }
+  // Papieren portefeuilles
+  renderPaper("paper", paper, "Model");
+  renderPaper("paperB", paperB, "Uitdager B");
+  renderPaper("paperC1", paperC1, "Uitdager C1");
+  renderPaper("paperC1b", paperC1b, "Uitdager C1b");
+  renderPaper("paperC2", paperC2, "Uitdager C2");
 
   // Backtest
   if (!bt) { document.getElementById("bt-tiles").innerHTML = '<p class="muted">Backtest volgt na de eerste run.</p>'; return; }
@@ -226,7 +268,7 @@ async function main() {
   lineChart("bt-chart", C.dates, [
     { label: "Long/short", data: C.long_short, color: "--s1" }, { label: "Long/cash", data: C.long_cash, color: "--s2" },
     { label: "Kopen en vasthouden", data: C.buy_hold, color: "--s3" }, { label: "Altijd long (perps)", data: C.always_long_perp, color: "--s4" }], true);
-  const names = { long_short: "Long/short", long_cash: "Long/cash", buy_hold: "Kopen en vasthouden", always_long_perp: "Altijd long (perps)" };
+  const names = { long_short: "Long/short", long_cash: "Long/cash", sterk60: "Uitdager B (≥60% long)", buy_hold: "Kopen en vasthouden", always_long_perp: "Altijd long (perps)" };
   document.getElementById("bt-scen").innerHTML = `<tr><th>Scenario</th><th>Totaal</th><th>Per jaar</th><th>Max. daling</th><th>Sharpe</th><th>Trades</th><th>Fees</th><th>Funding</th></tr>` +
     Object.entries(bt.scenarios).map(([k, s]) => `<tr><td>${names[k]}</td><td>${sgn(s.total_return, 0)}</td><td>${sgn(s.cagr)}</td>
       <td>${pct(s.max_drawdown)}</td><td>${s.sharpe == null ? "–" : num(s.sharpe, 2)}</td><td>${num(s.trades)}</td>
@@ -235,9 +277,9 @@ async function main() {
     bt.calibration.map(c => `<tr><td>${c.bin.replace(/\./g, ",")}</td><td>${num(c.n)}</td><td>${pct(c.mean_p)}</td><td>${pct(c.observed)}</td></tr>`).join("");
   document.getElementById("bt-coef").innerHTML = `<tr><th>Feature</th><th>Gewicht</th></tr>` +
     bt.coefficients.slice(0, 10).map(c => `<tr><td>${c.feature}</td><td>${(c.coef >= 0 ? "+" : "") + num(c.coef, 3)}</td></tr>`).join("");
-  document.getElementById("bt-years").innerHTML = `<tr><th>Jaar</th><th>Dagen</th><th>Hitrate</th><th>Altijd omhoog</th><th>Long/short</th><th>Long/cash</th><th>Kopen en vasthouden</th></tr>` +
+  document.getElementById("bt-years").innerHTML = `<tr><th>Jaar</th><th>Dagen</th><th>Hitrate</th><th>Altijd omhoog</th><th>Long/short</th><th>Long/cash</th><th>Uitdager B</th><th>Kopen en vasthouden</th></tr>` +
     bt.per_year.map(y => `<tr><td>${y.year}</td><td>${y.n}</td><td>${pct(y.hitrate)}</td><td>${pct(y.always_up)}</td>
-      <td>${sgn(y.long_short, 0)}</td><td>${sgn(y.long_cash, 0)}</td><td>${sgn(y.buy_hold, 0)}</td></tr>`).join("");
+      <td>${sgn(y.long_short, 0)}</td><td>${sgn(y.long_cash, 0)}</td><td>${y.sterk60 == null ? "–" : sgn(y.sterk60, 0)}</td><td>${sgn(y.buy_hold, 0)}</td></tr>`).join("");
   document.getElementById("model-version").textContent = bt.model_version;
 }
 main();
