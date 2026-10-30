@@ -2,7 +2,11 @@ name: Dagelijkse voorspelling
 
 on:
   schedule:
-    - cron: "30 0 * * *"
+    # drie pogingen per dag: lukt de eerste, dan doen de volgende niets
+    # (GitHub vertraagt geplande runs soms uren; minuut 17 is rustiger dan :00/:30)
+    - cron: "17 0 * * *"
+    - cron: "17 2 * * *"
+    - cron: "17 5 * * *"
   workflow_dispatch:
     inputs:
       force_backtest:
@@ -22,8 +26,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
           cache: pip
