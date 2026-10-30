@@ -1,4 +1,4 @@
-"""Haalt BTC-dagkoersen (Yahoo) en Hyperliquid-funding op.
+"""Haalt BTC-dagkoersen (Coinbase) en Hyperliquid-funding op.
 
 - Alleen AFGESLOTEN dagen: de lopende dag (UTC) wordt weggelaten.
 - Controle op gaten en uitschieters; bij verdachte data stopt het script,
@@ -14,44 +14,48 @@ import requests
 
 from common import DATA
 
-YAHOO = "https://query1.finance.yahoo.com/v8/finance/chart/BTC-USD"
+COINBASE = "https://api.exchange.coinbase.com/products/BTC-USD/candles"
+CB_START = "2015-07-20"
 HL = "https://api.hyperliquid.xyz/info"
-START = int(datetime(2014, 9, 17, tzinfo=timezone.utc).timestamp())
 HL_START_MS = int(datetime(2023, 5, 1, tzinfo=timezone.utc).timestamp() * 1000)
 UA = {"User-Agent": "Mozilla/5.0 (btc-up-or-down)"}
 
 
 def fetch_prices() -> pd.DataFrame:
-    now = int(time.time())
-    params = {"period1": START, "period2": now, "interval": "1d", "events": "history"}
-    res, last_err = None, None
-    for attempt in range(4):
-        try:
-            r = requests.get(YAHOO, params=params, headers=UA, timeout=30)
-            if r.status_code != 200:
-                raise RuntimeError(f"HTTP {r.status_code}: {r.text[:200]}")
-            body = r.json()
-            chart = body.get("chart") or {}
-            if chart.get("error") or not chart.get("result"):
-                raise RuntimeError(f"Yahoo-fout: {chart.get('error') or 'lege result'}")
-            res = chart["result"][0]
-            break
-        except Exception as e:
-            last_err = e
-            print(f"Yahoo poging {attempt + 1}/4 mislukt: {e}")
-            time.sleep(10 * (attempt + 1))
-    if res is None:
-        sys.exit(f"STOP — Yahoo niet bereikbaar na 4 pogingen: {last_err}")
-    q = res["indicators"]["quote"][0]
-    df = pd.DataFrame({
-        "date": pd.to_datetime(res["timestamp"], unit="s", utc=True).tz_localize(None).normalize(),
-        "open": q["open"], "high": q["high"], "low": q["low"],
-        "close": q["close"], "volume": q["volume"],
-    })
-    df = df.dropna(subset=["close"]).drop_duplicates("date", keep="last")
+    """Dagcandles van Coinbase (BTC-USD, UTC-dagen). Een dag staat er meteen na
+    middernacht UTC in; Yahoo leverde het slot pas uren later (soms na 06:00 UTC)."""
+    rows = []
+    end = pd.Timestamp.now(tz="UTC").tz_localize(None).normalize() + pd.Timedelta(days=1)
+    start0 = pd.Timestamp(CB_START)
+    while end > start0:
+        start = max(start0, end - pd.Timedelta(days=299))
+        params = {"granularity": 86400, "start": start.isoformat() + "Z", "end": end.isoformat() + "Z"}
+        batch, last_err = None, None
+        for attempt in range(4):
+            try:
+                r = requests.get(COINBASE, params=params, headers=UA, timeout=30)
+                if r.status_code != 200:
+                    raise RuntimeError(f"HTTP {r.status_code}: {r.text[:200]}")
+                batch = r.json()
+                if not isinstance(batch, list):
+                    raise RuntimeError(f"onverwacht antwoord: {str(batch)[:200]}")
+                break
+            except Exception as e:
+                last_err = e
+                print(f"Coinbase poging {attempt + 1}/4 mislukt ({start.date()}): {e}")
+                time.sleep(10 * (attempt + 1))
+        if batch is None:
+            sys.exit(f"STOP — Coinbase niet bereikbaar na 4 pogingen: {last_err}")
+        rows += batch
+        end = start
+        time.sleep(0.25)
+    # [tijd, low, high, open, close, volume]
+    df = pd.DataFrame(rows, columns=["t", "low", "high", "open", "close", "volume"])
+    df["date"] = pd.to_datetime(df["t"], unit="s").dt.normalize()
+    df = df.drop_duplicates("date").sort_values("date")
     today = pd.Timestamp.now(tz="UTC").tz_localize(None).normalize()
     df = df[df["date"] < today]                       # lopende dag eruit
-    return df.sort_values("date").reset_index(drop=True)
+    return df[["date", "open", "high", "low", "close", "volume"]].reset_index(drop=True)
 
 
 def check_prices(df: pd.DataFrame) -> list:

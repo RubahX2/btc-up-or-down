@@ -10,7 +10,7 @@ Hyperliquid-perps (1x, long/short) en een walk-forward backtest.
 
 | Bestand | Wat |
 |---|---|
-| `fetch_data.py` | BTC-dagkoersen (Yahoo) en Hyperliquid-funding ophalen, data controleren |
+| `fetch_data.py` | BTC-dagkoersen (Coinbase) en Hyperliquid-funding ophalen, data controleren |
 | `predict.py` | voorspelling van vandaag loggen, uitkomsten invullen, papieren portefeuille bijwerken |
 | `backtest.py` | walk-forward backtest; `--open-vault` opent de kluis (één keer) |
 | `common.py` | instellingen, features, versienummers |

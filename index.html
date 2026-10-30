@@ -107,11 +107,11 @@ footer { color: var(--muted); font-size: 12.5px; text-align: center; margin-top:
     <div class="scroll"><table id="bt-years"></table></div>
   </section>
 
-  <footer>BTC up or down · v<span id="ui-version">0.1.2</span> · model <span id="model-version">–</span> · geen beleggingsadvies</footer>
+  <footer>BTC up or down · v<span id="ui-version">0.2</span> · model <span id="model-version">–</span> · geen beleggingsadvies</footer>
 </main>
 
 <script>
-const UI_VERSION = "0.1.2";
+const UI_VERSION = "0.2";
 document.getElementById("ui-version").textContent = UI_VERSION;
 const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const pct = (x, d = 1) => x == null ? "–" : (x * 100).toFixed(d).replace(".", ",") + "%";
