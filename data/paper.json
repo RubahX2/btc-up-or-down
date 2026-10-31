@@ -1,11 +1,25 @@
 {
  "start_capital": 1000.0,
- "equity": 1000.0,
- "position": 0.0,
- "units": 0.0,
- "last_mark": null,
- "last_time_ms": null,
- "start_date": null,
- "start_mark": null,
- "history": []
+ "equity": 999.5435229604884,
+ "position": 1.0,
+ "units": 0.01294234172976335,
+ "last_mark": 77230.5,
+ "last_time_ms": 1793426022394,
+ "start_date": "2026-10-31",
+ "start_mark": 77230.5,
+ "history": [
+  {
+   "target_date": "2026-10-31",
+   "time": "2026-10-31T05:53:42+00:00",
+   "signal": "up",
+   "position": 1.0,
+   "mid": 77230.5,
+   "fill": 77231.0,
+   "fee": 0.45,
+   "slippage": 0.0065,
+   "funding": 0.0,
+   "equity": 999.54,
+   "buy_hold": 1000.0
+  }
+ ]
 }
