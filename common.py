@@ -11,8 +11,14 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parent
 DATA = ROOT / "data"
 
-UI_VERSION = "0.6"
+UI_VERSION = "0.7"
 MODEL_VERSION = "0.2-logreg-cb"
+
+# Primaire uitdager, vastgelegd op 2026-11-02 vóór er live resultaten waren (2 geldige dagen).
+# Enkel deze telt voor het oordeel na 180 en 365 dagen; de andere uitdagers zijn verkennend.
+# Kanttekening: de drempel 6/8 werd gekozen met kennis van de kluis, dus de historische cijfers zijn
+# geflatteerd. De live run is wel een zuivere toets. C1 (5/8) blijft meedraaien als controlegroep.
+PRIMARY_CHALLENGER = "C1b-trend6of8-v1"
 
 # Kluis: alles vanaf deze datum blijft buiten de backtest. Vaste datum,
 # zodat de kluis niet elke dag mee opschuift. Eén keer openen, op het einde.

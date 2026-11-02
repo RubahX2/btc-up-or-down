@@ -17,8 +17,8 @@ from datetime import datetime, timezone
 import pandas as pd
 import requests
 
-from common import (DATA, FEATURES, MODEL_VERSION, TAKER_FEE, build_features, fit_model,
-                    load_prices)
+from common import (DATA, FEATURES, MODEL_VERSION, PRIMARY_CHALLENGER, TAKER_FEE, build_features,
+                    fit_model, load_prices)
 
 PRED = DATA / "predictions.json"
 PAPER = DATA / "paper.json"
@@ -314,12 +314,80 @@ def update_carry(target_date: str, path=None) -> dict:
     return st
 
 
+# ---------- uitdagerslog (append-only, met versie per uitdager) ----------
+
+CHAL = DATA / "challengers.json"
+CHALLENGER_IDS = {            # bestand -> vaste id met versie; een regelwijziging = nieuwe id
+    "paper.json": f"A-longshort@{MODEL_VERSION}",
+    "paper_sterk60.json": f"B-sterk60@{MODEL_VERSION}",
+    "paper_c1.json": "C1-trend5of8-v1",
+    "paper_c1b.json": "C1b-trend6of8-v1",
+    "paper_c1b_hlp.json": "C1b-hlp-v1",
+    "paper_carry.json": "C2-carry-v1",
+}
+CHAL_FROZEN = ("target_date", "challenger_id", "made_at", "delay_h", "late", "input", "position", "backfilled")
+
+
+def _delay(target_date: str, made_at: str) -> float:
+    return round((pd.Timestamp(made_at) - pd.Timestamp(target_date, tz="UTC")).total_seconds() / 3600, 2)
+
+
+def _backfill(preds: list) -> list:
+    """Eenmalig: de bestaande papieren historiek omzetten naar logregels (gemarkeerd als backfilled)."""
+    p_up = {e["target_date"]: e["p_up"] for e in preds}
+    rows = []
+    for fname, cid in CHALLENGER_IDS.items():
+        st = load_json(DATA / fname, None)
+        for h in (st or {}).get("history", []):
+            inp = {"signals_on": h["signals_on"]} if "signals_on" in h else {"p_up": p_up.get(h["target_date"])}
+            rows.append({"target_date": h["target_date"], "challenger_id": cid, "made_at": h["time"],
+                         "delay_h": _delay(h["target_date"], h["time"]), "late": False, "input": inp,
+                         "position": h.get("position", 0.0 if cid.startswith("C2") else None), "backfilled": True})
+    return rows
+
+
+def log_challengers(entry: dict, results: dict, prices: pd.DataFrame) -> list:
+    """results: {bestandsnaam: (input-dict, positie)}. Eén regel per uitdager per doeldag; bestaande regels
+    worden nooit gewijzigd, enkel hun uitkomst ingevuld. Stopt als een bevroren veld toch zou veranderen."""
+    preds = load_json(PRED, [])
+    log = load_json(CHAL, None)
+    if log is None:
+        log = _backfill(preds)
+    before = {(r["target_date"], r["challenger_id"]): {k: r.get(k) for k in CHAL_FROZEN} for r in log}
+    made = now_utc().isoformat(timespec="seconds")
+    for fname, (inp, pos) in results.items():
+        key = (entry["target_date"], CHALLENGER_IDS[fname])
+        if key in before:
+            continue                                  # tweede run op dezelfde dag: niets schrijven
+        log.append({"target_date": key[0], "challenger_id": key[1], "made_at": made,
+                    "delay_h": _delay(key[0], made), "late": bool(entry.get("late")), "input": inp,
+                    "position": pos, "backfilled": False, "primary": key[1] == PRIMARY_CHALLENGER})
+    # uitkomst invullen zodra het slot van de doeldag bekend is (slot tot slot, zoals de backtest)
+    closes = dict(zip(prices["date"].dt.strftime("%Y-%m-%d"), prices["close"]))
+    for r in log:
+        if r.get("btc_ret") is None and r["target_date"] in closes:
+            prev = (pd.Timestamp(r["target_date"]) - pd.Timedelta(days=1)).strftime("%Y-%m-%d")
+            if prev in closes:
+                r["btc_ret"] = round(closes[r["target_date"]] / closes[prev] - 1, 6)
+                if r.get("position") is not None and not r["challenger_id"].startswith("C2"):
+                    r["strat_ret"] = round(r["position"] * r["btc_ret"], 6)
+    for r in log:
+        k = (r["target_date"], r["challenger_id"])
+        if k in before and {f: r.get(f) for f in CHAL_FROZEN} != before[k]:
+            sys.exit(f"STOP — bevroren uitdagersregel {k} zou wijzigen")
+    log.sort(key=lambda r: (r["target_date"], r["challenger_id"]))
+    CHAL.write_text(json.dumps(log, indent=1))
+    return log
+
+
 def main():
     prices = load_prices()
     entry = update_predictions(prices)
     print(f"Voorspelling {entry['target_date']}: {entry['signal']} (p_up={entry['p_up']})")
+    results = {}
     try:
         st = update_paper(entry)
+        results["paper.json"] = ({"p_up": entry["p_up"]}, st["position"])
         print(f"Papieren portefeuille: {st['equity']:.2f} USD, positie {st['position']:+.0f}")
     except Exception as e:                            # papier mag de voorspelling nooit blokkeren
         print(f"Papieren portefeuille overgeslagen: {e}")
@@ -327,6 +395,7 @@ def main():
     for name, rule in CHALLENGERS.items():
         try:
             st = update_paper(entry, rule["position"](entry["p_up"]), DATA / f"paper_{name}.json")
+            results[f"paper_{name}.json"] = ({"p_up": entry["p_up"]}, st["position"])
             print(f"Uitdager {name}: {st['equity']:.2f} USD, positie {st['position']:+.0f}")
         except Exception as e:
             print(f"Uitdager {name} overgeslagen: {e}")
@@ -335,6 +404,7 @@ def main():
         n_on = c1_signals(prices)
         st = update_paper(entry, 1.0 if n_on >= C1_MIN_ON else 0.0, DATA / "paper_c1.json",
                           fee_rate=SPOT_FEE, perp=False, extra={"signals_on": n_on})
+        results["paper_c1.json"] = ({"signals_on": n_on}, st["position"])
         print(f"C1 trend-ensemble ({n_on}/8 aan): {st['equity']:.2f} USD, positie {st['position']:+.0f}")
     except Exception as e:
         print(f"C1 overgeslagen: {e}")
@@ -342,20 +412,30 @@ def main():
         n_on = c1_signals(prices)
         st = update_paper(entry, 1.0 if n_on >= C1B_MIN_ON else 0.0, DATA / "paper_c1b.json",
                           fee_rate=SPOT_FEE, perp=False, extra={"signals_on": n_on})
+        results["paper_c1b.json"] = ({"signals_on": n_on}, st["position"])
         print(f"C1b trend 6/8 ({n_on}/8 aan): {st['equity']:.2f} USD, positie {st['position']:+.0f}")
     except Exception as e:
         print(f"C1b overgeslagen: {e}")
     try:
         st = update_c1b_hlp(entry, c1_signals(prices))
+        results["paper_c1b_hlp.json"] = ({"signals_on": c1_signals(prices)}, st["position"])
         print(f"C1b+HLP: {st['equity']:.2f} USD, positie {st['position']:+.0f}")
     except Exception as e:
         print(f"C1b+HLP overgeslagen: {e}")
     # C2: funding carry (marktneutraal)
     try:
         st = update_carry(entry["target_date"])
+        results["paper_carry.json"] = ({}, 0.0)
         print(f"C2 carry: {st['equity']:.2f} USD")
     except Exception as e:
         print(f"C2 overgeslagen: {e}")
+    try:
+        log = log_challengers(entry, results, prices)
+        print(f"Uitdagerslog: {len(log)} regels (primair: {PRIMARY_CHALLENGER})")
+    except SystemExit:
+        raise
+    except Exception as e:
+        print(f"Uitdagerslog overgeslagen: {e}")
 
 
 if __name__ == "__main__":

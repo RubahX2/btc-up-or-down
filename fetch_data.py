@@ -103,6 +103,32 @@ def fetch_funding(existing: pd.DataFrame) -> pd.DataFrame:
     return pd.concat([existing, daily]).sort_values("date").reset_index(drop=True)
 
 
+def log_positioning(status: dict):
+    """Dagelijkse momentopname van de hefboom in de markt (Hyperliquid BTC-perp), voor later onderzoek:
+    open interest, huidige funding, premie t.o.v. de index en 24u-volume. Wordt enkel aangevuld, nooit herschreven."""
+    meta, ctxs = requests.post(HL, json={"type": "metaAndAssetCtxs"}, timeout=30).json()
+    i = [a["name"] for a in meta["universe"]].index("BTC")
+    ctx = ctxs[i]
+    mark = float(ctx["markPx"])
+    row = {"tijd_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+           "mark": mark, "oracle": float(ctx["oraclePx"]),
+           "oi_btc": float(ctx["openInterest"]), "oi_usd": float(ctx["openInterest"]) * mark,
+           "funding_uur": float(ctx["funding"]), "premie": float(ctx.get("premium") or 0),
+           "volume_24u_usd": float(ctx["dayNtlVlm"])}
+    path = DATA / "positioning.csv"
+    new = not path.exists()
+    if not new:                                    # één momentopname per UTC-dag (de eerste run telt)
+        last = path.read_text().strip().splitlines()[-1].split(",")[0][:10]
+        if last == row["tijd_utc"][:10]:
+            status["positioning"] = "vandaag al gelogd"
+            return
+    with open(path, "a") as f:
+        if new:
+            f.write(",".join(row) + "\n")
+        f.write(",".join(str(v) for v in row.values()) + "\n")
+    status["positioning"] = row
+
+
 def main():
     DATA.mkdir(exist_ok=True)
     status = {"fetched_at": datetime.now(timezone.utc).isoformat(timespec="seconds"), "problems": []}
@@ -121,6 +147,11 @@ def main():
         status["funding_days"] = len(funding)
     except Exception as e:                       # funding is niet kritiek voor de voorspelling
         status["problems"].append(f"funding niet opgehaald: {e}")
+
+    try:
+        log_positioning(status)
+    except Exception as e:                       # niet kritiek
+        status["problems"].append(f"funding/positionering niet gelogd: {e}")
 
     (DATA / "fetch_status.json").write_text(json.dumps(status, indent=1))
     print(json.dumps(status, indent=1))

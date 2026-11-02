@@ -150,3 +150,37 @@ clock["ms"] += DAY; st = predict.update_c1b_hlp(e("2026-11-04"), 3, p3)       # 
 assert st["position"] == 0 and st["hlp_since_ms"] == clock["ms"]
 print(f"9. C1b+HLP: HLP-opbrengst, 4 dagen blokkering, instap en terugstorting kloppen; vermogen {st['equity']:.2f}: OK")
 shutil.rmtree(tmp)
+
+# 10. uitdagerslog (v0.7): backfill, één regel per dag per uitdager, tweede run schrijft niets, uitkomst achteraf
+tmp = Path(tempfile.mkdtemp())
+predict.DATA = tmp; predict.PRED = tmp / "predictions.json"; predict.CHAL = tmp / "challengers.json"; predict.PAPER = tmp / "paper.json"
+predict.now_utc = lambda: _dt.datetime.now(_dt.timezone.utc)
+(tmp / "paper_c1b.json").write_text(json.dumps({"history": [{"target_date": "2026-10-31", "time": "2026-10-31T06:10:00+00:00", "position": 0.0, "signals_on": 3}]}))
+e1 = dict(predict.update_predictions(prices.iloc[:-1]))               # doeldag = gisteren (te laat)
+res = {"paper_c1b.json": ({"signals_on": 7}, 1.0), "paper_c1.json": ({"signals_on": 7}, 1.0)}
+log = predict.log_challengers(e1, res, prices.iloc[:-1])
+bf = [r for r in log if r["backfilled"]]
+assert len(bf) == 1 and bf[0]["challenger_id"] == "C1b-trend6of8-v1" and bf[0]["delay_h"] == 6.17
+new = [r for r in log if not r["backfilled"]]
+assert len(new) == 2 and all(r["late"] for r in new) and [r["primary"] for r in new if r["challenger_id"] == "C1b-trend6of8-v1"] == [True]
+n1 = len(log); raw1 = (tmp / "challengers.json").read_text()
+log2 = predict.log_challengers(e1, {"paper_c1b.json": ({"signals_on": 2}, 0.0)}, prices.iloc[:-1])   # tweede run zelfde dag
+assert len(log2) == n1 and (tmp / "challengers.json").read_text() == raw1, "tweede run mag niets schrijven"
+log3 = predict.log_challengers(e1, {}, prices)                        # slot van de doeldag nu bekend
+r = [x for x in log3 if x["target_date"] == e1["target_date"] and x["challenger_id"] == "C1-trend5of8-v1"][0]
+c = prices.set_index("date")["close"]; td = pd.Timestamp(e1["target_date"])
+assert abs(r["btc_ret"] - (c[td] / c[td - pd.Timedelta(days=1)] - 1)) < 1e-6 and r["strat_ret"] == r["btc_ret"]
+print(f"10. uitdagerslog: backfill, primaire markering, geen dubbele regels, uitkomst achteraf: OK")
+shutil.rmtree(tmp)
+
+# 11. positionering: één momentopname per UTC-dag
+import fetch_data
+tmp = Path(tempfile.mkdtemp()); fetch_data.DATA = tmp
+class _R:
+    def __init__(s, d): s.d = d
+    def json(s): return s.d
+fetch_data.requests.post = lambda url, json, timeout: _R([{"universe": [{"name": "BTC"}]}, [{"markPx": "1", "oraclePx": "1", "openInterest": "1", "funding": "0", "dayNtlVlm": "1"}]])
+fetch_data.log_positioning({}); s2 = {}; fetch_data.log_positioning(s2)
+assert len((tmp / "positioning.csv").read_text().strip().splitlines()) == 2 and s2["positioning"] == "vandaag al gelogd"
+print("11. positionering: maximaal één regel per dag: OK")
+shutil.rmtree(tmp)

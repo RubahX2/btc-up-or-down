@@ -100,11 +100,11 @@ footer { color: var(--muted); font-size: 12.5px; text-align: center; margin-top:
   </section>
 
   <section id="paperC1b">
-    <h2>Uitdager C1b <span class="muted" style="font-weight:400">· zelfde trendsignalen, strengere drempel: long als ≥6 van 8 aan staan · Hyperliquid spot, start 1.000 USD</span></h2>
+    <h2>Uitdager C1b <span style="font-size:12px;font-weight:600;border:1px solid var(--ring);border-radius:999px;padding:2px 8px;vertical-align:middle">primair sinds 2-11-2026</span> <span class="muted" style="font-weight:400">· zelfde trendsignalen, strengere drempel: long als ≥6 van 8 aan staan · Hyperliquid spot, start 1.000 USD</span></h2>
     <div id="paperC1b-tiles" class="tiles"></div>
     <div class="chart"><canvas id="paperC1b-chart"></canvas></div>
     <div class="legend"><span><i style="background:var(--s1)"></i>Uitdager C1b</span><span><i style="background:var(--s3)"></i>Kopen en vasthouden</span></div>
-    <p class="note">Toegevoegd na de kluistoets: drempel 6/8 ligt in het midden van een plateau (5–7/8 scoren alle drie goed). Omdat de keuze de kluisdata kende, telt enkel de live run als toets.</p>
+    <p class="note">Primaire uitdager: enkel deze telt voor het oordeel na 180 en 365 dagen (vastgelegd op 2-11-2026, vóór er live resultaten waren). Toegevoegd na de kluistoets: drempel 6/8 ligt in het midden van een plateau (5–7/8 scoren alle drie goed). Omdat de keuze de kluisdata kende, telt enkel de live run als toets.</p>
   </section>
 
   <section id="paperC1bH">
@@ -147,11 +147,11 @@ footer { color: var(--muted); font-size: 12.5px; text-align: center; margin-top:
     <div class="scroll"><table id="bt-years"></table></div>
   </section>
 
-  <footer>BTC up or down · v<span id="ui-version">0.6</span> · model <span id="model-version">–</span> · geen beleggingsadvies</footer>
+  <footer>BTC up or down · v<span id="ui-version">0.7</span> · model <span id="model-version">–</span> · geen beleggingsadvies</footer>
 </main>
 
 <script>
-const UI_VERSION = "0.6";
+const UI_VERSION = "0.7";
 document.getElementById("ui-version").textContent = UI_VERSION;
 const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const pct = (x, d = 1) => x == null ? "–" : (x * 100).toFixed(d).replace(".", ",") + "%";

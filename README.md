@@ -17,6 +17,13 @@ Hyperliquid-perps (1x, long/short) en een walk-forward backtest.
 | `index.html` | de pagina |
 | `data/` | alle output; wordt elke nacht door de workflow gecommit |
 
+## Primaire uitdager
+
+**C1b-trend6of8-v1**, vastgelegd op 2 november 2026, vóór er live resultaten waren (2 geldige dagen).
+Enkel deze uitdager telt voor het oordeel na 180 en 365 dagen; de andere zijn verkennend. De drempel 6/8 werd
+gekozen met kennis van de kluis, dus de historische cijfers zijn geflatteerd; de live run is wel een zuivere toets.
+C1 (5/8) blijft meedraaien als controlegroep. Elke uitdager logt dagelijks naar `data/challengers.json` (append-only, met versie-id).
+
 ## Spelregels
 
 1. Een feature gebruikt alleen wat bekend is op het slot van de dag zelf.
