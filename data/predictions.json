@@ -49,6 +49,20 @@
   "signal": "down",
   "ref_date": "2026-10-31",
   "ref_close": 77423.98,
+  "outcome": "up",
+  "close": 78230.55,
+  "hit": false
+ },
+ {
+  "target_date": "2026-11-02",
+  "made_at": "2026-11-02T06:19:41+00:00",
+  "delay_h": 6.33,
+  "late": false,
+  "model_version": "0.2-logreg-cb",
+  "p_up": 0.4496,
+  "signal": "down",
+  "ref_date": "2026-11-01",
+  "ref_close": 78230.55,
   "outcome": null
  }
 ]
