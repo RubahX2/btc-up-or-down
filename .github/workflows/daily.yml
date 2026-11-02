@@ -2,8 +2,8 @@ name: Dagelijkse voorspelling
 
 on:
   schedule:
-    # drie pogingen per dag: lukt de eerste, dan doen de volgende niets
-    # (GitHub vertraagt geplande runs soms uren; minuut 17 is rustiger dan :00/:30)
+    # vangnet: GitHub start deze vaak ±6 uur te laat. De echte start komt van een externe trigger
+    # (cron-job.org -> workflow_dispatch om 00:20, 00:50 en 01:30 UTC). De eerste geslaagde run telt.
     - cron: "17 0 * * *"
     - cron: "17 2 * * *"
     - cron: "17 5 * * *"
@@ -43,6 +43,13 @@ jobs:
           git config user.name "btc-bot"
           git config user.email "actions@users.noreply.github.com"
           git add data/
-          git diff --cached --quiet || git commit -m "Run $(date -u +%Y-%m-%d)"
+          # enkel committen als er meer veranderde dan fetch_status.json (geen lege commits bij herhaalruns)
+          if git diff --cached --name-only | grep -v '^data/fetch_status.json$' | grep -q .; then
+            git commit -m "Run $(date -u +%Y-%m-%d)"
+          else
+            git reset -q
+            echo "Niets nieuws: geen commit"
+            exit 0
+          fi
           git pull --rebase
           git push
