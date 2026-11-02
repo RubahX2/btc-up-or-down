@@ -1,7 +1,17 @@
 {
- "fetched_at": "2026-11-02T13:27:25+00:00",
+ "fetched_at": "2026-11-02T19:05:01+00:00",
  "problems": [],
  "last_close_date": "2026-11-01",
  "n_days": 4123,
- "funding_days": 1270
+ "funding_days": 1270,
+ "positioning": {
+  "tijd_utc": "2026-11-02T19:05:08+00:00",
+  "mark": 76928.0,
+  "oracle": 76953.2,
+  "oi_btc": 41409.1733,
+  "oi_usd": 3185524883.6224003,
+  "funding_uur": 1.25e-05,
+  "premie": -0.0003274718,
+  "volume_24u_usd": 2137623629.93403
+ }
 }

@@ -1,0 +1,240 @@
+[
+ {
+  "target_date": "2026-10-31",
+  "challenger_id": "A-longshort@0.2-logreg-cb",
+  "made_at": "2026-10-31T05:53:42+00:00",
+  "delay_h": 5.89,
+  "late": false,
+  "input": {
+   "p_up": 0.5545
+  },
+  "position": 1.0,
+  "backfilled": true,
+  "btc_ret": 0.003156,
+  "strat_ret": 0.003156
+ },
+ {
+  "target_date": "2026-10-31",
+  "challenger_id": "B-sterk60@0.2-logreg-cb",
+  "made_at": "2026-10-31T05:53:42+00:00",
+  "delay_h": 5.89,
+  "late": false,
+  "input": {
+   "p_up": 0.5545
+  },
+  "position": 0.0,
+  "backfilled": true,
+  "btc_ret": 0.003156,
+  "strat_ret": 0.0
+ },
+ {
+  "target_date": "2026-10-31",
+  "challenger_id": "C1-trend5of8-v1",
+  "made_at": "2026-10-31T05:53:42+00:00",
+  "delay_h": 5.89,
+  "late": false,
+  "input": {
+   "signals_on": 3
+  },
+  "position": 0.0,
+  "backfilled": true,
+  "btc_ret": 0.003156,
+  "strat_ret": 0.0
+ },
+ {
+  "target_date": "2026-10-31",
+  "challenger_id": "C1b-hlp-v1",
+  "made_at": "2026-10-31T05:53:43+00:00",
+  "delay_h": 5.9,
+  "late": false,
+  "input": {
+   "signals_on": 3
+  },
+  "position": 0.0,
+  "backfilled": true,
+  "btc_ret": 0.003156,
+  "strat_ret": 0.0
+ },
+ {
+  "target_date": "2026-10-31",
+  "challenger_id": "C1b-trend6of8-v1",
+  "made_at": "2026-10-31T05:53:43+00:00",
+  "delay_h": 5.9,
+  "late": false,
+  "input": {
+   "signals_on": 3
+  },
+  "position": 0.0,
+  "backfilled": true,
+  "btc_ret": 0.003156,
+  "strat_ret": 0.0
+ },
+ {
+  "target_date": "2026-10-31",
+  "challenger_id": "C2-carry-v1",
+  "made_at": "2026-10-31T05:53:43+00:00",
+  "delay_h": 5.9,
+  "late": false,
+  "input": {
+   "p_up": 0.5545
+  },
+  "position": 0.0,
+  "backfilled": true,
+  "btc_ret": 0.003156
+ },
+ {
+  "target_date": "2026-11-01",
+  "challenger_id": "A-longshort@0.2-logreg-cb",
+  "made_at": "2026-11-01T06:17:53+00:00",
+  "delay_h": 6.3,
+  "late": false,
+  "input": {
+   "p_up": 0.4631
+  },
+  "position": -1.0,
+  "backfilled": true,
+  "btc_ret": 0.010418,
+  "strat_ret": -0.010418
+ },
+ {
+  "target_date": "2026-11-01",
+  "challenger_id": "B-sterk60@0.2-logreg-cb",
+  "made_at": "2026-11-01T06:17:53+00:00",
+  "delay_h": 6.3,
+  "late": false,
+  "input": {
+   "p_up": 0.4631
+  },
+  "position": 0.0,
+  "backfilled": true,
+  "btc_ret": 0.010418,
+  "strat_ret": 0.0
+ },
+ {
+  "target_date": "2026-11-01",
+  "challenger_id": "C1-trend5of8-v1",
+  "made_at": "2026-11-01T06:17:54+00:00",
+  "delay_h": 6.3,
+  "late": false,
+  "input": {
+   "signals_on": 4
+  },
+  "position": 0.0,
+  "backfilled": true,
+  "btc_ret": 0.010418,
+  "strat_ret": 0.0
+ },
+ {
+  "target_date": "2026-11-01",
+  "challenger_id": "C1b-hlp-v1",
+  "made_at": "2026-11-01T06:17:54+00:00",
+  "delay_h": 6.3,
+  "late": false,
+  "input": {
+   "signals_on": 4
+  },
+  "position": 0.0,
+  "backfilled": true,
+  "btc_ret": 0.010418,
+  "strat_ret": 0.0
+ },
+ {
+  "target_date": "2026-11-01",
+  "challenger_id": "C1b-trend6of8-v1",
+  "made_at": "2026-11-01T06:17:54+00:00",
+  "delay_h": 6.3,
+  "late": false,
+  "input": {
+   "signals_on": 4
+  },
+  "position": 0.0,
+  "backfilled": true,
+  "btc_ret": 0.010418,
+  "strat_ret": 0.0
+ },
+ {
+  "target_date": "2026-11-01",
+  "challenger_id": "C2-carry-v1",
+  "made_at": "2026-11-01T06:17:55+00:00",
+  "delay_h": 6.3,
+  "late": false,
+  "input": {
+   "p_up": 0.4631
+  },
+  "position": 0.0,
+  "backfilled": true,
+  "btc_ret": 0.010418
+ },
+ {
+  "target_date": "2026-11-02",
+  "challenger_id": "A-longshort@0.2-logreg-cb",
+  "made_at": "2026-11-02T06:19:42+00:00",
+  "delay_h": 6.33,
+  "late": false,
+  "input": {
+   "p_up": 0.4496
+  },
+  "position": -1.0,
+  "backfilled": true
+ },
+ {
+  "target_date": "2026-11-02",
+  "challenger_id": "B-sterk60@0.2-logreg-cb",
+  "made_at": "2026-11-02T06:19:42+00:00",
+  "delay_h": 6.33,
+  "late": false,
+  "input": {
+   "p_up": 0.4496
+  },
+  "position": 0.0,
+  "backfilled": true
+ },
+ {
+  "target_date": "2026-11-02",
+  "challenger_id": "C1-trend5of8-v1",
+  "made_at": "2026-11-02T06:19:42+00:00",
+  "delay_h": 6.33,
+  "late": false,
+  "input": {
+   "signals_on": 4
+  },
+  "position": 0.0,
+  "backfilled": true
+ },
+ {
+  "target_date": "2026-11-02",
+  "challenger_id": "C1b-hlp-v1",
+  "made_at": "2026-11-02T06:19:43+00:00",
+  "delay_h": 6.33,
+  "late": false,
+  "input": {
+   "signals_on": 4
+  },
+  "position": 0.0,
+  "backfilled": true
+ },
+ {
+  "target_date": "2026-11-02",
+  "challenger_id": "C1b-trend6of8-v1",
+  "made_at": "2026-11-02T06:19:43+00:00",
+  "delay_h": 6.33,
+  "late": false,
+  "input": {
+   "signals_on": 4
+  },
+  "position": 0.0,
+  "backfilled": true
+ },
+ {
+  "target_date": "2026-11-02",
+  "challenger_id": "C2-carry-v1",
+  "made_at": "2026-11-02T06:19:44+00:00",
+  "delay_h": 6.33,
+  "late": false,
+  "input": {
+   "p_up": 0.4496
+  },
+  "position": 0.0,
+  "backfilled": true
+ }
+]
