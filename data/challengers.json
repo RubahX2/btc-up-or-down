@@ -175,7 +175,9 @@
    "p_up": 0.4496
   },
   "position": -1.0,
-  "backfilled": true
+  "backfilled": true,
+  "btc_ret": -0.019895,
+  "strat_ret": 0.019895
  },
  {
   "target_date": "2026-11-02",
@@ -187,7 +189,9 @@
    "p_up": 0.4496
   },
   "position": 0.0,
-  "backfilled": true
+  "backfilled": true,
+  "btc_ret": -0.019895,
+  "strat_ret": -0.0
  },
  {
   "target_date": "2026-11-02",
@@ -199,7 +203,9 @@
    "signals_on": 4
   },
   "position": 0.0,
-  "backfilled": true
+  "backfilled": true,
+  "btc_ret": -0.019895,
+  "strat_ret": -0.0
  },
  {
   "target_date": "2026-11-02",
@@ -211,7 +217,9 @@
    "signals_on": 4
   },
   "position": 0.0,
-  "backfilled": true
+  "backfilled": true,
+  "btc_ret": -0.019895,
+  "strat_ret": -0.0
  },
  {
   "target_date": "2026-11-02",
@@ -223,7 +231,9 @@
    "signals_on": 4
   },
   "position": 0.0,
-  "backfilled": true
+  "backfilled": true,
+  "btc_ret": -0.019895,
+  "strat_ret": -0.0
  },
  {
   "target_date": "2026-11-02",
@@ -235,6 +245,83 @@
    "p_up": 0.4496
   },
   "position": 0.0,
-  "backfilled": true
+  "backfilled": true,
+  "btc_ret": -0.019895
+ },
+ {
+  "target_date": "2026-11-03",
+  "challenger_id": "A-longshort@0.2-logreg-cb",
+  "made_at": "2026-11-03T00:21:18+00:00",
+  "delay_h": 0.35,
+  "late": false,
+  "input": {
+   "p_up": 0.5147
+  },
+  "position": 1.0,
+  "backfilled": false,
+  "primary": false
+ },
+ {
+  "target_date": "2026-11-03",
+  "challenger_id": "B-sterk60@0.2-logreg-cb",
+  "made_at": "2026-11-03T00:21:18+00:00",
+  "delay_h": 0.35,
+  "late": false,
+  "input": {
+   "p_up": 0.5147
+  },
+  "position": 0.0,
+  "backfilled": false,
+  "primary": false
+ },
+ {
+  "target_date": "2026-11-03",
+  "challenger_id": "C1-trend5of8-v1",
+  "made_at": "2026-11-03T00:21:18+00:00",
+  "delay_h": 0.35,
+  "late": false,
+  "input": {
+   "signals_on": 3
+  },
+  "position": 0.0,
+  "backfilled": false,
+  "primary": false
+ },
+ {
+  "target_date": "2026-11-03",
+  "challenger_id": "C1b-hlp-v1",
+  "made_at": "2026-11-03T00:21:18+00:00",
+  "delay_h": 0.35,
+  "late": false,
+  "input": {
+   "signals_on": 3
+  },
+  "position": 0.0,
+  "backfilled": false,
+  "primary": false
+ },
+ {
+  "target_date": "2026-11-03",
+  "challenger_id": "C1b-trend6of8-v1",
+  "made_at": "2026-11-03T00:21:18+00:00",
+  "delay_h": 0.35,
+  "late": false,
+  "input": {
+   "signals_on": 3
+  },
+  "position": 0.0,
+  "backfilled": false,
+  "primary": true
+ },
+ {
+  "target_date": "2026-11-03",
+  "challenger_id": "C2-carry-v1",
+  "made_at": "2026-11-03T00:21:18+00:00",
+  "delay_h": 0.35,
+  "late": false,
+  "input": {},
+  "position": 0.0,
+  "backfilled": false,
+  "primary": false
  }
 ]

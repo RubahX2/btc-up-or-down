@@ -3,8 +3,8 @@
  "equity": 1000.0,
  "position": 0.0,
  "units": 0.0,
- "last_mark": 78235.5,
- "last_time_ms": 1793600382957,
+ "last_mark": 76991.5,
+ "last_time_ms": 1793665277681,
  "start_date": "2026-10-31",
  "start_mark": 77230.5,
  "history": [
@@ -49,6 +49,20 @@
    "equity": 1000.0,
    "buy_hold": 1013.01,
    "signals_on": 4
+  },
+  {
+   "target_date": "2026-11-03",
+   "time": "2026-11-03T00:21:17+00:00",
+   "signal": "up",
+   "position": 0.0,
+   "mid": 76991.5,
+   "fill": 76991.5,
+   "fee": 0.0,
+   "slippage": 0.0,
+   "funding": 0.0,
+   "equity": 1000.0,
+   "buy_hold": 996.91,
+   "signals_on": 3
   }
  ]
 }
