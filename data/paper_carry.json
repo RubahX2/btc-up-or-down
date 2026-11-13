@@ -1,12 +1,12 @@
 {
  "kind": "carry",
  "start_capital": 1000.0,
- "equity": 1001.0577659604901,
+ "equity": 1001.1493908915638,
  "position": 0.0,
  "units": 0.00647040353228323,
  "entry": 77230.5,
- "collateral": 501.3452659604901,
- "last_time_ms": 1794442877598,
+ "collateral": 501.4368908915638,
+ "last_time_ms": 1794529279668,
  "start_date": "2026-10-31",
  "start_mark": 77230.5,
  "history": [
@@ -152,6 +152,17 @@
    "rebalanced": false,
    "equity": 1001.06,
    "buy_hold": 957.79
+  },
+  {
+   "target_date": "2026-11-13",
+   "time": "2026-11-13T00:21:20+00:00",
+   "mid": 71375.5,
+   "fee": 0.0,
+   "slippage": 0.0,
+   "funding": -0.0916,
+   "rebalanced": false,
+   "equity": 1001.15,
+   "buy_hold": 924.19
   }
  ]
 }
