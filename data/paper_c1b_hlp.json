@@ -1,10 +1,10 @@
 {
  "start_capital": 1000.0,
- "equity": 1012.236765184546,
+ "equity": 1012.5253954976805,
  "position": 0.0,
  "units": 0.0,
- "last_mark": 68329.5,
- "last_time_ms": 1794615680213,
+ "last_mark": 64174.5,
+ "last_time_ms": 1794702066227,
  "start_date": "2026-10-31",
  "start_mark": 77230.5,
  "history": [
@@ -232,9 +232,24 @@
    "buy_hold": 884.75,
    "signals_on": 1,
    "hlp_gain": 0.2007
+  },
+  {
+   "target_date": "2026-11-15",
+   "time": "2026-11-15T00:21:06+00:00",
+   "signal": "up",
+   "position": 0.0,
+   "mid": 64174.5,
+   "fill": 64174.5,
+   "fee": 0.0,
+   "slippage": 0.0,
+   "funding": 0.0,
+   "equity": 1012.53,
+   "buy_hold": 830.95,
+   "signals_on": 1,
+   "hlp_gain": 0.2886
   }
  ],
  "kind": "c1b_hlp",
  "hlp_since_ms": 1793426023113,
- "hlp_last_ms": 1794615679867
+ "hlp_last_ms": 1794702066045
 }
