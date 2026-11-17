@@ -1,17 +1,17 @@
 {
- "fetched_at": "2026-11-16T00:21:07+00:00",
+ "fetched_at": "2026-11-17T00:21:04+00:00",
  "problems": [],
- "last_close_date": "2026-11-15",
- "n_days": 4137,
- "funding_days": 1284,
+ "last_close_date": "2026-11-16",
+ "n_days": 4138,
+ "funding_days": 1285,
  "positioning": {
-  "tijd_utc": "2026-11-16T00:21:12+00:00",
-  "mark": 64978.0,
-  "oracle": 65001.6,
-  "oi_btc": 36530.3344,
-  "oi_usd": 2373668068.6432,
-  "funding_uur": 1.25e-05,
-  "premie": -0.000363068,
-  "volume_24u_usd": 5077062123.820763
+  "tijd_utc": "2026-11-17T00:21:09+00:00",
+  "mark": 64575.0,
+  "oracle": 64604.8,
+  "oi_btc": 37706.90248,
+  "oi_usd": 2434923227.646,
+  "funding_uur": 1.13561e-05,
+  "premie": -0.0006005746,
+  "volume_24u_usd": 3922909768.84932
  }
 }
