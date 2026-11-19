@@ -11,7 +11,7 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parent
 DATA = ROOT / "data"
 
-UI_VERSION = "0.8"
+UI_VERSION = "0.9"
 MODEL_VERSION = "0.2-logreg-cb"
 
 # Primaire uitdager, vastgelegd op 2026-11-02 vóór er live resultaten waren (2 geldige dagen).

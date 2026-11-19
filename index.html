@@ -155,11 +155,11 @@ footer { color: var(--muted); font-size: 12.5px; text-align: center; margin-top:
     <div class="scroll"><table id="bt-years"></table></div>
   </section>
 
-  <footer>BTC up or down · v<span id="ui-version">0.8</span> · model <span id="model-version">–</span> · <a href="versies/index-v0.7.html" style="color:inherit">vorige versie (v0.7)</a> · geen beleggingsadvies</footer>
+  <footer>BTC up or down · v<span id="ui-version">0.9</span> · model <span id="model-version">–</span> · vorige versies: <a href="versies/index-v0.8.html" style="color:inherit">v0.8</a>, <a href="versies/index-v0.7.html" style="color:inherit">v0.7</a> · geen beleggingsadvies</footer>
 </main>
 
 <script>
-const UI_VERSION = "0.8";
+const UI_VERSION = "0.9";
 document.getElementById("ui-version").textContent = UI_VERSION;
 const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const pct = (x, d = 1) => x == null ? "–" : (x * 100).toFixed(d).replace(".", ",") + "%";
@@ -250,7 +250,7 @@ async function liveTick(t) {
       }
       const labels = pts.map(p => hhmm(p[0])), data = pts.map(p => p[1]);
       if (!liveChart) {
-        liveChart = lineChart("live-chart", labels, [{ label: "BTC", data, color: "--s1" }, { label: "slot " + t.ref_date, data: data.map(() => t.ref_close), color: "--muted" }], false);
+        liveChart = lineChart("live-chart", labels, [{ label: "BTC", data, color: "--bh" }, { label: "slot " + t.ref_date, data: data.map(() => t.ref_close), color: "--muted" }], false);
         liveChart.data.datasets[1].borderDash = [4, 4]; liveChart.data.datasets[1].borderWidth = 1; liveChart.update();
       } else {
         liveChart.data.labels = labels; liveChart.data.datasets[0].data = data; liveChart.data.datasets[1].data = data.map(() => t.ref_close); liveChart.update();
@@ -288,7 +288,7 @@ async function main() {
       Gelogd op ${t.made_at.replace("T", " ").slice(0, 16)} UTC.${status ? " Data opgehaald " + status.fetched_at.replace("T", " ").slice(0, 16) + " UTC." : ""}</p>
       <div class="live-head"><span id="live-price" class="live-price">–</span><span id="live-change" class="muted"></span><span id="live-verdict"></span></div>
       <div class="chart" style="height:220px"><canvas id="live-chart"></canvas></div>
-      <div class="legend"><span><i style="background:var(--s1)"></i>BTC vandaag (5-minuten, UTC)</span><span><i style="background:var(--muted)"></i>slot ${t.ref_date}</span></div>
+      <div class="legend"><span><i style="background:var(--bh)"></i>BTC vandaag (5-minuten, UTC)</span><span><i style="background:var(--muted)"></i>slot ${t.ref_date}</span></div>
       <p class="note"><span id="live-dot" class="dot off"></span><span id="live-status">Live koers laden…</span></p>`;
     startLive(t);
   } else {
@@ -321,9 +321,9 @@ async function main() {
     : "Het live trackrecord start met de eerste afgeronde dag.";
   if (nLate) document.getElementById("live-note").textContent += ` ${nLate} voorspelling(en) te laat gemaakt (na 08:00 UTC op de doeldag) en niet meegeteld.`;
   const rows = (preds || []).slice(-30).reverse();
-  document.getElementById("live-table").innerHTML = rows.length ? `<tr><th>Doeldag</th><th>Signaal</th><th>Kans omhoog</th><th>Ref. slot</th><th>Slot</th><th>Uitkomst</th></tr>` +
-    rows.map(r => `<tr><td>${r.target_date}</td><td>${arrow(r.signal)}</td><td>${pct(r.p_up)}</td><td>${num(r.ref_close)}</td>
-      <td>${r.close ? num(r.close) : "–"}</td><td>${isLate(r) ? '<span class="muted">te laat, telt niet</span>' : r.outcome == null ? '<span class="muted">loopt</span>' : (r.hit ? '<span class="pill ok">✓ juist</span>' : '<span class="pill ko">✗ fout</span>')}</td></tr>`).join("") : "";
+  document.getElementById("live-table").innerHTML = rows.length ? `<tr><th>Doeldag</th><th>Signaal</th><th>Uitkomst</th><th>Kans omhoog</th><th>Ref. slot</th><th>Slot</th></tr>` +
+    rows.map(r => `<tr><td>${r.target_date}</td><td>${arrow(r.signal)}</td><td>${isLate(r) ? '<span class="muted">te laat, telt niet</span>' : r.outcome == null ? '<span class="muted">loopt</span>' : (r.hit ? '<span class="pill ok">✓ juist</span>' : '<span class="pill ko">✗ fout</span>')}</td>
+      <td>${pct(r.p_up)}</td><td>${num(r.ref_close)}</td><td>${r.close ? num(r.close) : "–"}</td></tr>`).join("") : "";
 
   // Papieren portefeuilles
   renderPaper("paper", paper, "Model");
