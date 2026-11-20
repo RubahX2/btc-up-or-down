@@ -301,6 +301,20 @@
   "signal": "down",
   "ref_date": "2026-11-18",
   "ref_close": 62981.71,
+  "outcome": "down",
+  "close": 61913.23,
+  "hit": true
+ },
+ {
+  "target_date": "2026-11-20",
+  "made_at": "2026-11-20T00:21:09+00:00",
+  "delay_h": 0.35,
+  "late": false,
+  "model_version": "0.2-logreg-cb",
+  "p_up": 0.4706,
+  "signal": "down",
+  "ref_date": "2026-11-19",
+  "ref_close": 61913.23,
   "outcome": null
  }
 ]
