@@ -1,8 +1,17 @@
 {
- "fetched_at": "2026-11-27T10:55:56+00:00",
+ "fetched_at": "2026-11-28T00:20:59+00:00",
  "problems": [],
- "last_close_date": "2026-11-26",
- "n_days": 4148,
- "funding_days": 1295,
- "positioning": "vandaag al gelogd"
+ "last_close_date": "2026-11-27",
+ "n_days": 4149,
+ "funding_days": 1296,
+ "positioning": {
+  "tijd_utc": "2026-11-28T00:21:05+00:00",
+  "mark": 59948.0,
+  "oracle": 59979.5,
+  "oi_btc": 35184.16872,
+  "oi_usd": 2109220546.4265602,
+  "funding_uur": 8.5709e-06,
+  "premie": -0.0006252136,
+  "volume_24u_usd": 3568310364.5136895
+ }
 }
